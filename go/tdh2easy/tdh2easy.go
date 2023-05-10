@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/smartcontractkit/libtdh2/go/tdh2"
+	"github.com/smartcontractkit/tdh2/go/tdh2"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/group/nist"
 	"go.dedis.ch/kyber/v3/xof/keccak"

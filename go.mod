@@ -1,4 +1,4 @@
-module github.com/smartcontractkit/libtdh2
+module github.com/smartcontractkit/tdh2
 
 go 1.19
 
