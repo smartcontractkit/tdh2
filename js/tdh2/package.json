@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "bcrypto": "^5.4.0",
+    "uniq": "^1.0.1"
+  }
+}
