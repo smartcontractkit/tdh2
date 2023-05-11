@@ -118,29 +118,9 @@ function encrypt(pub, msg) {
 
   return JSON.stringify({
 		TDH2Ctxt: Buffer.from(tdh2Ctxt).toString('base64'),
-		Ctxt:     ctxt.toString('base64'),
-		Nonce:    nonce.toString('base64')
+		SymCtxt:  ctxt.toString('base64'),
+		Nonce:    nonce.toString('base64'),
 	})
 }
 
-
-// // from https://github.com/smartcontractkit/fair-sequencing-service/blob/main/lib/conf/sample.json
-// const pub = JSON.parse(`{
-//   "Group": "P256",
-//   "G_bar": "BOb7YLFZBrEq/Uivc9zzraLDDmb+3oxs3gj2Sr12OoGsTya1h5kzwD9QNpoeCaJWAcgIvetBA+ENVY3NNcjad+8=",
-//   "H": "BEw8mUUjiObYeajfLDtePXowk7LIaISbV8O5RqjIJpMSVSM+tOY4IZ6ZU11TJ7iw1qdTegDVBKfaoiJNHwX3ut4=",
-//   "HArray": [
-//     "BJGmbFFoOQH8cx81CQz+jMCJ7M90qpHQm+Sg9cEiG6TST7ZCF8Va6uRTaIYhHnfSwLiKBkIIAuE1YF5/s5y2KAo=",
-//     "BDsAzknzsS+cUM0F+kOsAgqfRCIni7FOn/bkIGS0kbZ5umuh08vv0Yz79T0GYf1VhJyQJWAu6Kg/I3NPvBG/V9k=",
-//     "BOUNLiJ8f3Oyj5w+5b52WEsT5NZ9gQnF0s/o6Raya7iZIC8kRQHEj5b4xczCgkm/MTBnVMvxJQfb0T3+J5YZ/qw=",
-//     "BABzSra3eAX015Gd4r4mVZd43LxDN40QCFu3ZKmgG1EgyU4/BDU3hdkwLzcSJO7gu2zcRn7YmL/3vay6i696zYk=",
-//     "BE8Z0b8yT/Kzd0A7g1BemVJC3dTOWClD6+h3nfbiJx9KSF8wusVPwLPBOyaCTqP4ZeEjZd6cwEcpc7bwyKdp9WU="
-//   ]
-// }`)
-// // TDH2 raw encryption
-// console.log(tdh2Encrypt(pub, Buffer.from("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"), Buffer.from("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")))
-// console.log(tdh2Encrypt(pub, Buffer.from("\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11"), Buffer.from("\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11")))
-// // hybrid encryption (use by default)
-// console.log(encrypt(pub, Buffer.from("\x00\x00\x00\x00\x00\x00\x00\x00")))
-// console.log(encrypt(pub, Buffer.from("msg")))
-// console.log(encrypt(pub, Buffer.from("\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44")))
+module.exports = { encrypt }
