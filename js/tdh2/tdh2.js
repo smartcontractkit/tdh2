@@ -118,7 +118,7 @@ function encrypt(pub, msg) {
 
   return JSON.stringify({
 		TDH2Ctxt: Buffer.from(tdh2Ctxt).toString('base64'),
-		Ctxt:     ctxt.toString('base64'),
+		SymCtxt:  ctxt.toString('base64'),
 		Nonce:    nonce.toString('base64'),
 	})
 }
