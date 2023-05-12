@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option go_package = "./;config";
+
+package config_types;
+
+message OracleIDtoKeyShareIndex {
+  uint32 OracleID = 1;
+  uint32 KeyShareIndex = 2;
+}
+
+message ReportingPluginConfig {
+  uint32 maxQueryLengthBytes = 1;
+  uint32 maxObservationLengthBytes = 2;
+  uint32 maxReportLengthBytes = 3;
+  uint32 requestCountLimit = 4;
+  uint32 requestTotalBytesLimit = 5;
+  bool localRequest = 6;
+  bytes publicKey = 7;
+  bytes privKeyShare = 8;
+  repeated OracleIDtoKeyShareIndex oracleIDtoKeyIndex = 9;
+}
