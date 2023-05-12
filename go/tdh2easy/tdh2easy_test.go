@@ -28,7 +28,7 @@ func TestCiphertextDecrypt(t *testing.T) {
 	if _, err := c.Decrypt(share[0]); err != nil {
 		t.Errorf("Decrypt: %v", err)
 	}
-	if _, err := c.Decrypt(wrong[0]); err == nil {
+	if _, err := c.Decrypt(&PrivateShare{wrong[0]}); err == nil {
 		t.Errorf("Decrypt did not fail")
 	}
 }
@@ -74,7 +74,7 @@ func TestAggregate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Encrypt: %v", err)
 	}
-	decShares := make([]*tdh2.DecryptionShare, n)
+	decShares := make([]*DecryptionShare, n)
 	for i := range shares {
 		ds, err := c.Decrypt(shares[i])
 		if err != nil {
@@ -85,7 +85,7 @@ func TestAggregate(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		ctxt   *Ciphertext
-		shares []*tdh2.DecryptionShare
+		shares []*DecryptionShare
 		err    error
 	}{
 		{
@@ -205,7 +205,7 @@ func TestCiphertextUnmarshal(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		raw  []byte
-		pk   *tdh2.PublicKey
+		pk   *PublicKey
 		err  error
 	}{
 		{
@@ -278,7 +278,7 @@ func TestRedealEncryptNew(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Encrypt: %v", err)
 			}
-			ds := []*tdh2.DecryptionShare{}
+			ds := []*DecryptionShare{}
 			for _, sh := range shares {
 				d, err := c.Decrypt(sh)
 				if err != nil {
@@ -335,7 +335,7 @@ func TestRedealDecryptOld(t *testing.T) {
 				t.Fatalf("Redeal: %v", err)
 			}
 			// try to decrypt old ciphertext
-			ds := []*tdh2.DecryptionShare{}
+			ds := []*DecryptionShare{}
 			for _, sh := range shares {
 				d, err := c.Decrypt(sh)
 				if err != nil {
@@ -399,7 +399,7 @@ func FuzzCiphertextMarshal(f *testing.F) {
 		if len(key) != tdh2.InputSize {
 			t.Skip()
 		}
-		tdh2Ctxt, err := tdh2.Encrypt(pk, key, tdh2Input, xof)
+		tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, tdh2Input, xof)
 		if err != nil {
 			t.Fatalf("Encrypt(%v): %v", key, err)
 		}
@@ -424,7 +424,7 @@ func FuzzCiphertextUnmarshal(f *testing.F) {
 	if err != nil {
 		f.Fatalf("Keys: %v", err)
 	}
-	tdh2Ctxt, err := tdh2.Encrypt(pk, make([]byte, tdh2.InputSize), make([]byte, tdh2.InputSize), keccak.New(nil))
+	tdh2Ctxt, err := tdh2.Encrypt(pk.p, make([]byte, tdh2.InputSize), make([]byte, tdh2.InputSize), keccak.New(nil))
 	if err != nil {
 		f.Fatalf("Encrypt: %v", err)
 	}

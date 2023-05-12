@@ -19,6 +19,72 @@ const aes256KeySize = 32
 // defaultGroup is the default EC group used.
 var defaultGroup = nist.NewBlakeSHA256P256()
 
+// PrivateShare encodes TDH2 private share.
+type PrivateShare struct {
+	p *tdh2.PrivateShare
+}
+
+// Index returns private share index.
+func (p *PrivateShare) Index() int {
+	return p.p.Index()
+}
+
+func (p PrivateShare) Marshal() ([]byte, error) {
+	return p.p.Marshal()
+}
+
+func (p *PrivateShare) Unmarshal(data []byte) error {
+	p.p = &tdh2.PrivateShare{}
+	return p.p.Unmarshal(data)
+}
+
+// DecryptionShare encodes TDH2 decryption share.
+type DecryptionShare struct {
+	d *tdh2.DecryptionShare
+}
+
+// Index returns private share index.
+func (d *DecryptionShare) Index() int {
+	return d.d.Index()
+}
+
+func (d DecryptionShare) Marshal() ([]byte, error) {
+	return d.d.Marshal()
+}
+
+func (d *DecryptionShare) Unmarshal(data []byte) error {
+	d.d = &tdh2.DecryptionShare{}
+	return d.d.Unmarshal(data)
+}
+
+// PublicKey encodes TDH2 public key.
+type PublicKey struct {
+	p *tdh2.PublicKey
+}
+
+func (p PublicKey) Marshal() ([]byte, error) {
+	return p.p.Marshal()
+}
+
+func (p *PublicKey) Unmarshal(data []byte) error {
+	p.p = &tdh2.PublicKey{}
+	return p.p.Unmarshal(data)
+}
+
+// MasterSecret encodes TDH2 master key.
+type MasterSecret struct {
+	m *tdh2.MasterSecret
+}
+
+func (m MasterSecret) Marshal() ([]byte, error) {
+	return m.m.Marshal()
+}
+
+func (m *MasterSecret) Unmarshal(data []byte) error {
+	m.m = &tdh2.MasterSecret{}
+	return m.m.Unmarshal(data)
+}
+
 // Ciphertext encodes hybrid ciphertext.
 type Ciphertext struct {
 	tdh2Ctxt *tdh2.Ciphertext
@@ -27,25 +93,33 @@ type Ciphertext struct {
 }
 
 // Decrypt returns a decryption share for the ciphertext.
-func (c *Ciphertext) Decrypt(x_i *tdh2.PrivateShare) (*tdh2.DecryptionShare, error) {
+func (c *Ciphertext) Decrypt(x_i *PrivateShare) (*DecryptionShare, error) {
 	xof, err := xof()
 	if err != nil {
 		return nil, err
 	}
-	return c.tdh2Ctxt.Decrypt(defaultGroup, x_i, xof)
+	d, err := c.tdh2Ctxt.Decrypt(defaultGroup, x_i.p, xof)
+	if err != nil {
+		return nil, err
+	}
+	return &DecryptionShare{d}, nil
 }
 
 // VerifyShare checks if the share matches the ciphertext and public key.
-func (c *Ciphertext) VerifyShare(pk *tdh2.PublicKey, share *tdh2.DecryptionShare) error {
-	return tdh2.VerifyShare(pk, c.tdh2Ctxt, share)
+func (c *Ciphertext) VerifyShare(pk *PublicKey, share *DecryptionShare) error {
+	return tdh2.VerifyShare(pk.p, c.tdh2Ctxt, share.d)
 }
 
 // Aggregate decrypts the TDH2-encrypted key and using it recovers the
 // symmetrically encrypted plaintext. It takes decryption shares and
 // the total number of participants as the arguments.
 // Ciphertext and shares MUST be verified before calling Aggregate.
-func (c *Ciphertext) Aggregate(shares []*tdh2.DecryptionShare, n int) ([]byte, error) {
-	key, err := c.tdh2Ctxt.CombineShares(defaultGroup, shares, len(shares), n)
+func (c *Ciphertext) Aggregate(shares []*DecryptionShare, n int) ([]byte, error) {
+	sh := []*tdh2.DecryptionShare{}
+	for _, s := range shares {
+		sh = append(sh, s.d)
+	}
+	key, err := c.tdh2Ctxt.CombineShares(defaultGroup, sh, len(sh), n)
 	if err != nil {
 		return nil, fmt.Errorf("cannot combine shares: %w", err)
 	}
@@ -83,7 +157,7 @@ func (c *Ciphertext) Marshal() ([]byte, error) {
 }
 
 // UnmarshalVerify unmarshals ciphertext and verifies if it matches the public key.
-func (c *Ciphertext) UnmarshalVerify(data []byte, pk *tdh2.PublicKey) error {
+func (c *Ciphertext) UnmarshalVerify(data []byte, pk *PublicKey) error {
 	var raw ciphertextRaw
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return fmt.Errorf("cannot unmarshal data: %w", err)
@@ -95,7 +169,7 @@ func (c *Ciphertext) UnmarshalVerify(data []byte, pk *tdh2.PublicKey) error {
 		return fmt.Errorf("cannot unmarshal TDH2 ciphertext: %w", err)
 	}
 
-	if err := c.tdh2Ctxt.Verify(pk); err != nil {
+	if err := c.tdh2Ctxt.Verify(pk.p); err != nil {
 		return fmt.Errorf("tdh2 ciphertext verification: %w", err)
 	}
 	return nil
@@ -103,12 +177,20 @@ func (c *Ciphertext) UnmarshalVerify(data []byte, pk *tdh2.PublicKey) error {
 
 // GenerateKeys generates and returns, the master secret, public key, and private shares. It takes the
 // total number of nodes n and a threshold k (the number of shares sufficient for decryption).
-func GenerateKeys(k, n int) (*tdh2.MasterSecret, *tdh2.PublicKey, []*tdh2.PrivateShare, error) {
+func GenerateKeys(k, n int) (*MasterSecret, *PublicKey, []*PrivateShare, error) {
 	xof, err := xof()
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return tdh2.GenerateKeys(defaultGroup, nil, k, n, xof)
+	ms, pk, sh, err := tdh2.GenerateKeys(defaultGroup, nil, k, n, xof)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	shares := []*PrivateShare{}
+	for i := range sh {
+		shares = append(shares, &PrivateShare{sh[i]})
+	}
+	return &MasterSecret{ms}, &PublicKey{pk}, shares, nil
 }
 
 // Redeal re-deals private shares such that new quorums can decrypt old ciphertexts.
@@ -117,18 +199,26 @@ func GenerateKeys(k, n int) (*tdh2.MasterSecret, *tdh2.PublicKey, []*tdh2.Privat
 // key and private shares. The master secret passed corresponds to the public key returned.
 // The old public key can still be used for encryption but it cannot be used for share
 // verification (the new key has to be used instead).
-func Redeal(pk *tdh2.PublicKey, ms *tdh2.MasterSecret, k, n int) (*tdh2.PublicKey, []*tdh2.PrivateShare, error) {
+func Redeal(pk *PublicKey, ms *MasterSecret, k, n int) (*PublicKey, []*PrivateShare, error) {
 	xof, err := xof()
 	if err != nil {
 		return nil, nil, err
 	}
-	return tdh2.Redeal(pk, ms, k, n, xof)
+	p, sh, err := tdh2.Redeal(pk.p, ms.m, k, n, xof)
+	if err != nil {
+		return nil, nil, err
+	}
+	shares := []*PrivateShare{}
+	for i := range sh {
+		shares = append(shares, &PrivateShare{sh[i]})
+	}
+	return &PublicKey{p}, shares, nil
 }
 
 // Encrypt generates a fresh symmetric key, encrypts and authenticates
 // the message with it, and encrypts the key using TDH2. It returns a
 // struct encoding the generated ciphertexts.
-func Encrypt(pk *tdh2.PublicKey, msg []byte) (*Ciphertext, error) {
+func Encrypt(pk *PublicKey, msg []byte) (*Ciphertext, error) {
 	if aes256KeySize != tdh2.InputSize {
 		return nil, fmt.Errorf("incorrect key size")
 	}
@@ -149,7 +239,7 @@ func Encrypt(pk *tdh2.PublicKey, msg []byte) (*Ciphertext, error) {
 		return nil, err
 	}
 	// encrypt the key with TDH2 using empty label
-	tdh2Ctxt, err := tdh2.Encrypt(pk, key, make([]byte, tdh2.InputSize), xof)
+	tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, make([]byte, tdh2.InputSize), xof)
 	if err != nil {
 		return nil, fmt.Errorf("cannot TDH2 encrypt: %w", err)
 	}

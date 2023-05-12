@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/smartcontractkit/tdh2/go/tdh2"
 	"github.com/smartcontractkit/tdh2/go/tdh2easy"
 )
 
@@ -41,7 +40,7 @@ func TestJS(t *testing.T) {
 		if err := c.UnmarshalVerify(pairs[2*i+1], pk); err != nil {
 			t.Fatalf("Unmarshal: %v", err)
 		}
-		dec := []*tdh2.DecryptionShare{}
+		dec := []*tdh2easy.DecryptionShare{}
 		for _, s := range sh {
 			d, err := c.Decrypt(s)
 			if err != nil {
