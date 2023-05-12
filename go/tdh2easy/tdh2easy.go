@@ -93,7 +93,7 @@ type Ciphertext struct {
 }
 
 // Decrypt returns a decryption share for the ciphertext.
-func (c *Ciphertext) Decrypt(x_i *PrivateShare) (*DecryptionShare, error) {
+func Decrypt(c *Ciphertext, x_i *PrivateShare) (*DecryptionShare, error) {
 	xof, err := xof()
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (c *Ciphertext) Decrypt(x_i *PrivateShare) (*DecryptionShare, error) {
 }
 
 // VerifyShare checks if the share matches the ciphertext and public key.
-func (c *Ciphertext) VerifyShare(pk *PublicKey, share *DecryptionShare) error {
+func VerifyShare(c *Ciphertext, pk *PublicKey, share *DecryptionShare) error {
 	return tdh2.VerifyShare(pk.p, c.tdh2Ctxt, share.d)
 }
 
@@ -114,7 +114,7 @@ func (c *Ciphertext) VerifyShare(pk *PublicKey, share *DecryptionShare) error {
 // symmetrically encrypted plaintext. It takes decryption shares and
 // the total number of participants as the arguments.
 // Ciphertext and shares MUST be verified before calling Aggregate.
-func (c *Ciphertext) Aggregate(shares []*DecryptionShare, n int) ([]byte, error) {
+func Aggregate(c *Ciphertext, shares []*DecryptionShare, n int) ([]byte, error) {
 	sh := []*tdh2.DecryptionShare{}
 	for _, s := range shares {
 		sh = append(sh, s.d)

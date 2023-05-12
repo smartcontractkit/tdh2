@@ -25,10 +25,10 @@ func TestCiphertextDecrypt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Encrypt: %v", err)
 	}
-	if _, err := c.Decrypt(share[0]); err != nil {
+	if _, err := Decrypt(c, share[0]); err != nil {
 		t.Errorf("Decrypt: %v", err)
 	}
-	if _, err := c.Decrypt(&PrivateShare{wrong[0]}); err == nil {
+	if _, err := Decrypt(c, &PrivateShare{wrong[0]}); err == nil {
 		t.Errorf("Decrypt did not fail")
 	}
 }
@@ -46,18 +46,18 @@ func TestCiphertextVerifyShare(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Encrypt: %v", err)
 	}
-	ds, err := c.Decrypt(share[0])
+	ds, err := Decrypt(c, share[0])
 	if err != nil {
 		t.Fatalf("Decrypt: %v", err)
 	}
-	wrongDs, err := c.Decrypt(wrongShare[0])
+	wrongDs, err := Decrypt(c, wrongShare[0])
 	if err != nil {
 		t.Fatalf("Decrypt: %v", err)
 	}
-	if err := c.VerifyShare(pk, ds); err != nil {
+	if err := VerifyShare(c, pk, ds); err != nil {
 		t.Errorf("VerifyShare: %v", err)
 	}
-	if err := c.VerifyShare(pk, wrongDs); err == nil {
+	if err := VerifyShare(c, pk, wrongDs); err == nil {
 		t.Errorf("VerifyShare did not fail")
 	}
 }
@@ -76,7 +76,7 @@ func TestAggregate(t *testing.T) {
 	}
 	decShares := make([]*DecryptionShare, n)
 	for i := range shares {
-		ds, err := c.Decrypt(shares[i])
+		ds, err := Decrypt(c, shares[i])
 		if err != nil {
 			t.Fatalf("Decrypt: %v", err)
 		}
@@ -136,7 +136,7 @@ func TestAggregate(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			out, err := tc.ctxt.Aggregate(tc.shares, n)
+			out, err := Aggregate(tc.ctxt, tc.shares, n)
 			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
 				t.Errorf("err=%v, want=%v", err, tc.err)
 			} else if err != nil {
@@ -280,16 +280,16 @@ func TestRedealEncryptNew(t *testing.T) {
 			}
 			ds := []*DecryptionShare{}
 			for _, sh := range shares {
-				d, err := c.Decrypt(sh)
+				d, err := Decrypt(c, sh)
 				if err != nil {
 					t.Fatalf("Decrypt: %v", err)
 				}
-				if err := c.VerifyShare(newPk, d); err != nil {
+				if err := VerifyShare(c, newPk, d); err != nil {
 					t.Fatalf("VerifyShare: %v", err)
 				}
 				ds = append(ds, d)
 			}
-			if got, err := c.Aggregate(ds[:tc.k], tc.n); err != nil {
+			if got, err := Aggregate(c, ds[:tc.k], tc.n); err != nil {
 				t.Errorf("Aggregate: %v", err)
 			} else if !cmp.Equal(got, want) {
 				t.Errorf("got=%v, want=%v", got, want)
@@ -337,21 +337,21 @@ func TestRedealDecryptOld(t *testing.T) {
 			// try to decrypt old ciphertext
 			ds := []*DecryptionShare{}
 			for _, sh := range shares {
-				d, err := c.Decrypt(sh)
+				d, err := Decrypt(c, sh)
 				if err != nil {
 					t.Fatalf("Decrypt: %v", err)
 				}
-				if err := c.VerifyShare(new, d); err != nil {
+				if err := VerifyShare(c, new, d); err != nil {
 					t.Fatalf("VerifyShare: %v", err)
 				}
 				ds = append(ds, d)
 			}
 			// should fail w/o enough shares
-			if _, err := c.Aggregate(ds[:tc.k-1], tc.n); err == nil {
+			if _, err := Aggregate(c, ds[:tc.k-1], tc.n); err == nil {
 				t.Error("Aggregate did not fail")
 			}
 			// try with enough shares
-			if got, err := c.Aggregate(ds[:tc.k], tc.n); err != nil {
+			if got, err := Aggregate(c, ds[:tc.k], tc.n); err != nil {
 				t.Errorf("Aggregate: %v", err)
 			} else if !cmp.Equal(got, want) {
 				t.Errorf("got=%v, want=%v", got, want)
@@ -374,12 +374,12 @@ func TestRedealReuseOldShares(t *testing.T) {
 		t.Fatalf("Encrypt: %v", err)
 	}
 	// use old share for decryption
-	ds, err := c.Decrypt(shares[0])
+	ds, err := Decrypt(c, shares[0])
 	if err != nil {
 		t.Fatalf("Decrypt: %v", err)
 	}
 	// make sure old shares cannot be used for new encryptions
-	if err := c.VerifyShare(newPk, ds); err == nil {
+	if err := VerifyShare(c, newPk, ds); err == nil {
 		t.Error("VerifyShare did not fail")
 	}
 }

@@ -42,13 +42,13 @@ func TestJS(t *testing.T) {
 		}
 		dec := []*tdh2easy.DecryptionShare{}
 		for _, s := range sh {
-			d, err := c.Decrypt(s)
+			d, err := tdh2easy.Decrypt(&c, s)
 			if err != nil {
 				t.Fatalf("Decrypt: %v", err)
 			}
 			dec = append(dec, d)
 		}
-		got, err := c.Aggregate(dec, 3)
+		got, err := tdh2easy.Aggregate(&c, dec, 3)
 		if err != nil {
 			t.Fatalf("Aggregate: %v", err)
 		}
