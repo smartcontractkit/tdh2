@@ -94,9 +94,8 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 	queryProto := Query{}
 	for _, request := range decryptionRequests {
 		ciphertext := &tdh2easy.Ciphertext{}
-		err := ciphertext.UnmarshalVerify(request.ciphertext, dp.publicKey)
-		if err != nil {
-			dp.logger.Error("DecryptionReporting Observation: cannot unmarshal the ciphertext, skipping it", commontypes.LogFields{
+		if err := ciphertext.UnmarshalVerify(request.ciphertext, dp.publicKey); err != nil {
+			dp.logger.Error("DecryptionReporting Query: cannot unmarshal the ciphertext, skipping it", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": request.ciphertextId,
 			})
@@ -145,10 +144,11 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 			})
 			return nil, fmt.Errorf("cannot unmarshal and verify the ciphertext: %w", err)
 		}
-		if dp.specificConfig.Config.LocalRequest {
+		if dp.specificConfig.Config.RequireLocalRequestCheck {
 			queueCiphertextBytes, err := dp.decryptionQueue.GetCiphertext(request.CiphertextID)
 			if err != nil {
-				dp.logger.Error("DecryptionReporting Observation: cannot find ciphertext locally, skipping it", commontypes.LogFields{
+				dp.logger.Warn("DecryptionReporting Observation: cannot find ciphertext locally, skipping it", commontypes.LogFields{
+					"error":        err,
 					"ciphertextID": request.CiphertextID,
 				})
 				continue
@@ -163,7 +163,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 
 		decryptionShare, err := ciphertext.Decrypt(dp.privKeyShare)
 		if err != nil {
-			dp.logger.Error("DecryptionReporting Observation: cannot decrypt the ciphertext, the leader is faulty", commontypes.LogFields{
+			dp.logger.Error("DecryptionReporting Observation: cannot decrypt the ciphertext", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": request.CiphertextID,
 			})
@@ -276,6 +276,9 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 			continue
 		}
 
+		// OCR2.0 guaranties 2f+1 observations are from distinct oracles
+		// which guaranties f+1 valid observations and, hence, f+1 valid decryption shares.
+		// Therefore, here it is guaranteed that len(decrShares) > f.
 		plaintext, err := ciphertext.Aggregate(decrShares, dp.genericConfig.N)
 		if err != nil {
 			dp.logger.Error("DecryptionReporting Report: cannot aggregate decryption shares", commontypes.LogFields{
@@ -345,8 +348,7 @@ func (dp *decryptionPlugin) ShouldAcceptFinalizedReport(ctx context.Context, ts 
 	})
 
 	reportProto := &Report{}
-	err := proto.Unmarshal(report, reportProto)
-	if err != nil {
+	if err := proto.Unmarshal(report, reportProto); err != nil {
 		return false, fmt.Errorf("cannot unmarshal report: %w", err)
 	}
 

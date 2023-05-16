@@ -16,8 +16,7 @@ type ReportingPluginConfigWrapper struct {
 
 func DecodeReportingPluginConfig(raw []byte) (*ReportingPluginConfigWrapper, error) {
 	configProto := &ReportingPluginConfig{}
-	err := proto.Unmarshal(raw, configProto)
-	if err != nil {
+	if err := proto.Unmarshal(raw, configProto); err != nil {
 		return nil, err
 	}
 	return &ReportingPluginConfigWrapper{Config: configProto}, nil

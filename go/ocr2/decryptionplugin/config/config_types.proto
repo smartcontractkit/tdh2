@@ -15,7 +15,7 @@ message ReportingPluginConfig {
   uint32 maxReportLengthBytes = 3;
   uint32 requestCountLimit = 4;
   uint32 requestTotalBytesLimit = 5;
-  bool localRequest = 6;
+  bool requireLocalRequestCheck = 6;
   bytes publicKey = 7;
   bytes privKeyShare = 8;
   repeated OracleIDtoKeyShareIndex oracleIDtoKeyIndex = 9;
