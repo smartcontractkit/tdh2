@@ -3,6 +3,7 @@ package decryptionplugin
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/smartcontractkit/libocr/commontypes"
@@ -12,6 +13,8 @@ import (
 	"github.com/smartcontractkit/tdh2/go/tdh2easy"
 	"google.golang.org/protobuf/proto"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type DecryptionReportingPluginFactory struct {
 	DecryptionQueue DecryptionQueuingService
@@ -146,8 +149,14 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 		}
 		if dp.specificConfig.Config.RequireLocalRequestCheck {
 			queueCiphertextBytes, err := dp.decryptionQueue.GetCiphertext(request.CiphertextID)
-			if err != nil {
+			if err != nil && errors.Is(err, ErrNotFound) {
 				dp.logger.Warn("DecryptionReporting Observation: cannot find ciphertext locally, skipping it", commontypes.LogFields{
+					"error":        err,
+					"ciphertextID": request.CiphertextID,
+				})
+				continue
+			} else if err != nil {
+				dp.logger.Error("DecryptionReporting Observation: cannot find ciphertext locally, skipping it", commontypes.LogFields{
 					"error":        err,
 					"ciphertextID": request.CiphertextID,
 				})
@@ -353,7 +362,7 @@ func (dp *decryptionPlugin) ShouldAcceptFinalizedReport(ctx context.Context, ts 
 	}
 
 	for _, item := range reportProto.ProcessedDecryptedRequests {
-		dp.decryptionQueue.ReturnResult(item.CiphertextID, item.Plaintext)
+		dp.decryptionQueue.SetResult(item.CiphertextID, item.Plaintext)
 	}
 
 	dp.logger.Debug("DecryptionReporting ShouldAcceptFinalizedReport: end", commontypes.LogFields{
