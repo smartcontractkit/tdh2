@@ -14,8 +14,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var ErrNotFound = errors.New("not found")
-
 type DecryptionReportingPluginFactory struct {
 	DecryptionQueue DecryptionQueuingService
 	Logger          commontypes.Logger
@@ -156,7 +154,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 				})
 				continue
 			} else if err != nil {
-				dp.logger.Error("DecryptionReporting Observation: cannot find ciphertext locally, skipping it", commontypes.LogFields{
+				dp.logger.Error("DecryptionReporting Observation: failed when looking for ciphertext locally, skipping it", commontypes.LogFields{
 					"error":        err,
 					"ciphertextID": request.CiphertextID,
 				})

@@ -1,5 +1,9 @@
 package decryptionplugin
 
+import "errors"
+
+var ErrNotFound = errors.New("not found")
+
 type CiphertextId = []byte
 
 type DecryptionRequest struct {
