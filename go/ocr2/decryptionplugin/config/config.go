@@ -26,16 +26,16 @@ func EncodeReportingPluginConfig(rpConfig *ReportingPluginConfigWrapper) ([]byte
 	return proto.Marshal(rpConfig.Config)
 }
 
-func EncodeOracleIDtoKeyShareIndex(oracleID commontypes.OracleID, keyShareIndex int) *OracleIDtoKeyShareIndex {
+func EncodeOracleIdtoKeyShareIndex(oracleID commontypes.OracleID, keyShareIndex int) *OracleIDtoKeyShareIndex {
 	return &OracleIDtoKeyShareIndex{
-		OracleID:      uint32(oracleID),
+		OracleId:      uint32(oracleID),
 		KeyShareIndex: uint32(keyShareIndex),
 	}
 }
 
-func DecodeOracleIDtoKeyShareIndex(oracleIDtoKeyShareIndex *OracleIDtoKeyShareIndex) (commontypes.OracleID, int, error) {
-	if oracleIDtoKeyShareIndex.OracleID > math.MaxUint8 {
+func DecodeOracleIdtoKeyShareIndex(oracleIDtoKeyShareIndex *OracleIDtoKeyShareIndex) (commontypes.OracleID, int, error) {
+	if oracleIDtoKeyShareIndex.OracleId > math.MaxUint8 {
 		return 0, 0, fmt.Errorf("oracleID is larger than MAX_UINT8")
 	}
-	return commontypes.OracleID(oracleIDtoKeyShareIndex.OracleID), int(oracleIDtoKeyShareIndex.KeyShareIndex), nil
+	return commontypes.OracleID(oracleIDtoKeyShareIndex.OracleId), int(oracleIDtoKeyShareIndex.KeyShareIndex), nil
 }

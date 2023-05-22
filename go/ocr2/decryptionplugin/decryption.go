@@ -51,8 +51,8 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 	}
 
 	oracleToKeyShare := make(map[commontypes.OracleID]int)
-	for _, entry := range pluginConfig.Config.OracleIDtoKeyIndex {
-		oID, ksID, err := config.DecodeOracleIDtoKeyShareIndex(entry)
+	for _, entry := range pluginConfig.Config.OracleIdToKeyIndex {
+		oID, ksID, err := config.DecodeOracleIdtoKeyShareIndex(entry)
 		if err != nil {
 			return nil, types.ReportingPluginInfo{}, fmt.Errorf("unalbe to decode reporting plugin oracle id to key Share index mapping: %w", err)
 		}
@@ -103,7 +103,7 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 			continue
 		}
 		queryProto.DecryptionRequests = append(queryProto.GetDecryptionRequests(), &CiphertextWithID{
-			CiphertextID: request.ciphertextId,
+			CiphertextId: request.ciphertextId,
 			Ciphertext:   request.ciphertext,
 		})
 	}
@@ -141,28 +141,28 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 		if err := ciphertext.UnmarshalVerify(ciphertextBytes, dp.publicKey); err != nil {
 			dp.logger.Error("DecryptionReporting Observation: cannot unmarshal and verify the ciphertext, the leader is faulty", commontypes.LogFields{
 				"error":        err,
-				"ciphertextID": request.CiphertextID,
+				"ciphertextID": request.CiphertextId,
 			})
 			return nil, fmt.Errorf("cannot unmarshal and verify the ciphertext: %w", err)
 		}
 		if dp.specificConfig.Config.RequireLocalRequestCheck {
-			queueCiphertextBytes, err := dp.decryptionQueue.GetCiphertext(request.CiphertextID)
+			queueCiphertextBytes, err := dp.decryptionQueue.GetCiphertext(request.CiphertextId)
 			if err != nil && errors.Is(err, ErrNotFound) {
 				dp.logger.Warn("DecryptionReporting Observation: cannot find ciphertext locally, skipping it", commontypes.LogFields{
 					"error":        err,
-					"ciphertextID": request.CiphertextID,
+					"ciphertextID": request.CiphertextId,
 				})
 				continue
 			} else if err != nil {
 				dp.logger.Error("DecryptionReporting Observation: failed when looking for ciphertext locally, skipping it", commontypes.LogFields{
 					"error":        err,
-					"ciphertextID": request.CiphertextID,
+					"ciphertextID": request.CiphertextId,
 				})
 				continue
 			}
 			if !bytes.Equal(queueCiphertextBytes, ciphertextBytes) {
 				dp.logger.Error("DecryptionReporting Observation: local ciphertext does not match the query ciphertext, skipping it", commontypes.LogFields{
-					"ciphertextID": request.CiphertextID,
+					"ciphertextID": request.CiphertextId,
 				})
 				continue
 			}
@@ -172,7 +172,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 		if err != nil {
 			dp.logger.Error("DecryptionReporting Observation: cannot decrypt the ciphertext", commontypes.LogFields{
 				"error":        err,
-				"ciphertextID": request.CiphertextID,
+				"ciphertextID": request.CiphertextId,
 			})
 			continue
 		}
@@ -180,12 +180,12 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 		if err != nil {
 			dp.logger.Error("DecryptionReporting Observation: cannot marshal the decryption share, skipping it", commontypes.LogFields{
 				"error":        err,
-				"ciphertextID": request.CiphertextID,
+				"ciphertextID": request.CiphertextId,
 			})
 			continue
 		}
 		observationProto.DecryptionShares = append(observationProto.DecryptionShares, &DecryptionShareWithID{
-			CiphertextID:    request.CiphertextID,
+			CiphertextId:    request.CiphertextId,
 			DecryptionShare: decryptionShareBytes,
 		})
 	}
@@ -221,11 +221,11 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		if err := ciphertext.UnmarshalVerify(request.Ciphertext, dp.publicKey); err != nil {
 			dp.logger.Error("DecryptionReporting Report: cannot unmarshal and verify the ciphertext, the leader is faulty", commontypes.LogFields{
 				"error":        err,
-				"ciphertextID": request.CiphertextID,
+				"ciphertextID": request.CiphertextId,
 			})
 			return false, nil, fmt.Errorf("cannot unmarshal and verify the ciphertext: %w", err)
 		}
-		ciphertexts[string(request.CiphertextID)] = ciphertext
+		ciphertexts[string(request.CiphertextId)] = ciphertext
 	}
 
 	fPlusOne := dp.genericConfig.F + 1
@@ -241,7 +241,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		}
 
 		for _, decryptionShareWithID := range observationProto.DecryptionShares {
-			ciphertextID := string(decryptionShareWithID.CiphertextID)
+			ciphertextID := string(decryptionShareWithID.CiphertextId)
 			ciphertext, ok := ciphertexts[ciphertextID]
 			if !ok {
 				dp.logger.Error("DecryptionReporting Report: there is not ciphertext in the query with matching id", commontypes.LogFields{
@@ -301,7 +301,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 			"ciphertextID": id,
 		})
 		reportProto.ProcessedDecryptedRequests = append(reportProto.ProcessedDecryptedRequests, &ProcessedDecryptionRequest{
-			CiphertextID: []byte(id),
+			CiphertextId: []byte(id),
 			Plaintext:    plaintext,
 		})
 	}
@@ -360,7 +360,7 @@ func (dp *decryptionPlugin) ShouldAcceptFinalizedReport(ctx context.Context, ts 
 	}
 
 	for _, item := range reportProto.ProcessedDecryptedRequests {
-		dp.decryptionQueue.SetResult(item.CiphertextID, item.Plaintext)
+		dp.decryptionQueue.SetResult(item.CiphertextId, item.Plaintext)
 	}
 
 	dp.logger.Debug("DecryptionReporting ShouldAcceptFinalizedReport: end", commontypes.LogFields{

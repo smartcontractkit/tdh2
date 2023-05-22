@@ -5,24 +5,24 @@ option go_package = "./;decryptionplugin";
 package types;
 
 message CiphertextWithID {
-	bytes ciphertextID = 1;
+	bytes ciphertext_id = 1;
 	bytes ciphertext = 2;
 }
 message Query {
-	repeated CiphertextWithID decryptionRequests = 1;
+	repeated CiphertextWithID decryption_requests = 1;
 }
 
 message DecryptionShareWithID {
-	bytes ciphertextID = 1;
-	bytes decryptionShare = 2;
+	bytes ciphertext_id = 1;
+	bytes decryption_share = 2;
 }
 
 message Observation {
-	repeated DecryptionShareWithID decryptionShares = 1;
+	repeated DecryptionShareWithID decryption_shares = 1;
 }
 
 message ProcessedDecryptionRequest {
-	bytes ciphertextID = 1;
+	bytes ciphertext_id = 1;
 	bytes plaintext = 2;
 }
 

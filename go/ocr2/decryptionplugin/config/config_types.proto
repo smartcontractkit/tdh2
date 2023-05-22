@@ -5,18 +5,18 @@ option go_package = "./;config";
 package config_types;
 
 message OracleIDtoKeyShareIndex {
-  uint32 OracleID = 1;
-  uint32 KeyShareIndex = 2;
+  uint32 oracle_id = 1;
+  uint32 key_share_index = 2;
 }
 
 message ReportingPluginConfig {
-  uint32 maxQueryLengthBytes = 1;
-  uint32 maxObservationLengthBytes = 2;
-  uint32 maxReportLengthBytes = 3;
-  uint32 requestCountLimit = 4;
-  uint32 requestTotalBytesLimit = 5;
-  bool requireLocalRequestCheck = 6;
-  bytes publicKey = 7;
-  bytes privKeyShare = 8;
-  repeated OracleIDtoKeyShareIndex oracleIDtoKeyIndex = 9;
+  uint32 max_query_length_bytes = 1;
+  uint32 max_observation_length_bytes = 2;
+  uint32 max_report_length_bytes = 3;
+  uint32 request_count_limit = 4;
+  uint32 request_total_bytes_limit = 5;
+  bool require_local_request_check = 6;
+  bytes public_key = 7;
+  bytes priv_key_share = 8;
+  repeated OracleIDtoKeyShareIndex oracle_id_to_key_index = 9;
 }
