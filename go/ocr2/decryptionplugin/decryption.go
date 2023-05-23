@@ -9,7 +9,6 @@ import (
 	"github.com/smartcontractkit/libocr/commontypes"
 	"github.com/smartcontractkit/libocr/offchainreporting2/types"
 	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin/config"
-	"github.com/smartcontractkit/tdh2/go/tdh2"
 	"github.com/smartcontractkit/tdh2/go/tdh2easy"
 	"google.golang.org/protobuf/proto"
 )
@@ -22,8 +21,8 @@ type DecryptionReportingPluginFactory struct {
 type decryptionPlugin struct {
 	logger           commontypes.Logger
 	decryptionQueue  DecryptionQueuingService
-	publicKey        *tdh2.PublicKey
-	privKeyShare     *tdh2.PrivateShare
+	publicKey        *tdh2easy.PublicKey
+	privKeyShare     *tdh2easy.PrivateShare
 	oracleToKeyShare map[commontypes.OracleID]int
 	genericConfig    *types.ReportingPluginConfig
 	specificConfig   *config.ReportingPluginConfigWrapper
@@ -62,8 +61,8 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 	plugin := decryptionPlugin{
 		f.Logger,
 		f.DecryptionQueue,
-		&tdh2.PublicKey{},
-		&tdh2.PrivateShare{},
+		&tdh2easy.PublicKey{},
+		&tdh2easy.PrivateShare{},
 		oracleToKeyShare,
 		&rpConfig,
 		pluginConfig,
@@ -168,7 +167,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 			}
 		}
 
-		decryptionShare, err := ciphertext.Decrypt(dp.privKeyShare)
+		decryptionShare, err := tdh2easy.Decrypt(ciphertext, dp.privKeyShare)
 		if err != nil {
 			dp.logger.Error("DecryptionReporting Observation: cannot decrypt the ciphertext", commontypes.LogFields{
 				"error":        err,
@@ -229,7 +228,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 	}
 
 	fPlusOne := dp.genericConfig.F + 1
-	validDecryptionShares := make(map[string][]*tdh2.DecryptionShare)
+	validDecryptionShares := make(map[string][]*tdh2easy.DecryptionShare)
 	for _, ob := range obs {
 		observationProto := &Observation{}
 		if err := proto.Unmarshal(ob.Observation, observationProto); err != nil {
@@ -286,7 +285,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		// OCR2.0 guaranties 2f+1 observations are from distinct oracles
 		// which guaranties f+1 valid observations and, hence, f+1 valid decryption shares.
 		// Therefore, here it is guaranteed that len(decrShares) > f.
-		plaintext, err := ciphertext.Aggregate(decrShares, dp.genericConfig.N)
+		plaintext, err := tdh2easy.Aggregate(ciphertext, decrShares, dp.genericConfig.N)
 		if err != nil {
 			dp.logger.Error("DecryptionReporting Report: cannot aggregate decryption shares", commontypes.LogFields{
 				"error":        err,
@@ -325,8 +324,8 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 }
 
 func (dp *decryptionPlugin) getValidDecryptionShare(observer commontypes.OracleID,
-	ciphertext *tdh2easy.Ciphertext, decryptionShareBytes []byte) (*tdh2.DecryptionShare, error) {
-	decryptionShare := &tdh2.DecryptionShare{}
+	ciphertext *tdh2easy.Ciphertext, decryptionShareBytes []byte) (*tdh2easy.DecryptionShare, error) {
+	decryptionShare := &tdh2easy.DecryptionShare{}
 	if err := decryptionShare.Unmarshal(decryptionShareBytes); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal decryption share: %w", err)
 	}
@@ -340,7 +339,7 @@ func (dp *decryptionPlugin) getValidDecryptionShare(observer commontypes.OracleI
 		return nil, fmt.Errorf("invalid decryption share index: expected %d and got %d", expectedKeyShareIndex, decryptionShare.Index())
 	}
 
-	if err := ciphertext.VerifyShare(dp.publicKey, decryptionShare); err != nil {
+	if err := tdh2easy.VerifyShare(ciphertext, dp.publicKey, decryptionShare); err != nil {
 		return nil, fmt.Errorf("decryption share verification failed: %w", err)
 	}
 	return decryptionShare, nil

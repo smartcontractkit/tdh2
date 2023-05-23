@@ -3,6 +3,7 @@ package tdh2easy
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -11,6 +12,123 @@ import (
 	"go.dedis.ch/kyber/v3/group/nist"
 	"go.dedis.ch/kyber/v3/xof/keccak"
 )
+
+func TestShareIndex(t *testing.T) {
+	_, pk, sh, err := GenerateKeys(5, 10)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	for i := range sh {
+		if sh[i].Index() != i {
+			t.Errorf("index=%v, want=%v", sh[i].Index(), i)
+		}
+	}
+	c, err := Encrypt(pk, []byte("msg"))
+	if err != nil {
+		t.Fatalf("Encrypt: %v", err)
+	}
+	for i, s := range sh {
+		ds, err := Decrypt(c, s)
+		if err != nil {
+			t.Fatalf("Decrypt: %v", err)
+		}
+		if ds.Index() != i {
+			t.Errorf("index=%v, want=%v", ds.Index(), i)
+		}
+	}
+}
+
+func TestPrivateShareMarshal(t *testing.T) {
+	_, _, want, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	b, err := want[0].Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var got PrivateShare
+	if err := got.Unmarshal(b); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if !reflect.DeepEqual(got.p, want[0].p) {
+		t.Errorf("got=%v want=%v", got, want[0])
+	}
+	if err := got.Unmarshal([]byte("broken")); err == nil {
+		t.Errorf("Unmarshal did not fail")
+	}
+}
+
+func TestDecryptionShareMarshal(t *testing.T) {
+	_, pk, sh, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	c, err := Encrypt(pk, []byte("msg"))
+	if err != nil {
+		t.Fatalf("Encrypt: %v", err)
+	}
+	want, err := Decrypt(c, sh[0])
+	if err != nil {
+		t.Fatalf("Decrypt: %v", err)
+	}
+	b, err := want.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var got DecryptionShare
+	if err := got.Unmarshal(b); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if !reflect.DeepEqual(got.d, want.d) {
+		t.Errorf("got=%v want=%v", got, want)
+	}
+	if err := got.Unmarshal([]byte("broken")); err == nil {
+		t.Errorf("Unmarshal did not fail")
+	}
+}
+
+func TestPublicKeyMarshal(t *testing.T) {
+	_, want, _, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	b, err := want.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var got PublicKey
+	if err := got.Unmarshal(b); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if !got.p.Equal(want.p) {
+		t.Errorf("got=%v want=%v", got, want)
+	}
+	if err := got.Unmarshal([]byte("broken")); err == nil {
+		t.Errorf("Unmarshal did not fail")
+	}
+}
+
+func TestMasterSecretMarshal(t *testing.T) {
+	want, _, _, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	b, err := want.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var got MasterSecret
+	if err := got.Unmarshal(b); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if !reflect.DeepEqual(got.m, want.m) {
+		t.Errorf("got=%v want=%v", got, want)
+	}
+	if err := got.Unmarshal([]byte("broken")); err == nil {
+		t.Errorf("Unmarshal did not fail")
+	}
+}
 
 func TestCiphertextDecrypt(t *testing.T) {
 	_, pk, share, err := GenerateKeys(1, 1)
@@ -25,10 +143,10 @@ func TestCiphertextDecrypt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Encrypt: %v", err)
 	}
-	if _, err := c.Decrypt(share[0]); err != nil {
+	if _, err := Decrypt(c, share[0]); err != nil {
 		t.Errorf("Decrypt: %v", err)
 	}
-	if _, err := c.Decrypt(wrong[0]); err == nil {
+	if _, err := Decrypt(c, &PrivateShare{wrong[0]}); err == nil {
 		t.Errorf("Decrypt did not fail")
 	}
 }
@@ -46,18 +164,18 @@ func TestCiphertextVerifyShare(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Encrypt: %v", err)
 	}
-	ds, err := c.Decrypt(share[0])
+	ds, err := Decrypt(c, share[0])
 	if err != nil {
 		t.Fatalf("Decrypt: %v", err)
 	}
-	wrongDs, err := c.Decrypt(wrongShare[0])
+	wrongDs, err := Decrypt(c, wrongShare[0])
 	if err != nil {
 		t.Fatalf("Decrypt: %v", err)
 	}
-	if err := c.VerifyShare(pk, ds); err != nil {
+	if err := VerifyShare(c, pk, ds); err != nil {
 		t.Errorf("VerifyShare: %v", err)
 	}
-	if err := c.VerifyShare(pk, wrongDs); err == nil {
+	if err := VerifyShare(c, pk, wrongDs); err == nil {
 		t.Errorf("VerifyShare did not fail")
 	}
 }
@@ -74,9 +192,9 @@ func TestAggregate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Encrypt: %v", err)
 	}
-	decShares := make([]*tdh2.DecryptionShare, n)
+	decShares := make([]*DecryptionShare, n)
 	for i := range shares {
-		ds, err := c.Decrypt(shares[i])
+		ds, err := Decrypt(c, shares[i])
 		if err != nil {
 			t.Fatalf("Decrypt: %v", err)
 		}
@@ -85,7 +203,7 @@ func TestAggregate(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		ctxt   *Ciphertext
-		shares []*tdh2.DecryptionShare
+		shares []*DecryptionShare
 		err    error
 	}{
 		{
@@ -136,7 +254,7 @@ func TestAggregate(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			out, err := tc.ctxt.Aggregate(tc.shares, n)
+			out, err := Aggregate(tc.ctxt, tc.shares, n)
 			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
 				t.Errorf("err=%v, want=%v", err, tc.err)
 			} else if err != nil {
@@ -205,7 +323,7 @@ func TestCiphertextUnmarshal(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		raw  []byte
-		pk   *tdh2.PublicKey
+		pk   *PublicKey
 		err  error
 	}{
 		{
@@ -278,18 +396,18 @@ func TestRedealEncryptNew(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Encrypt: %v", err)
 			}
-			ds := []*tdh2.DecryptionShare{}
+			ds := []*DecryptionShare{}
 			for _, sh := range shares {
-				d, err := c.Decrypt(sh)
+				d, err := Decrypt(c, sh)
 				if err != nil {
 					t.Fatalf("Decrypt: %v", err)
 				}
-				if err := c.VerifyShare(newPk, d); err != nil {
+				if err := VerifyShare(c, newPk, d); err != nil {
 					t.Fatalf("VerifyShare: %v", err)
 				}
 				ds = append(ds, d)
 			}
-			if got, err := c.Aggregate(ds[:tc.k], tc.n); err != nil {
+			if got, err := Aggregate(c, ds[:tc.k], tc.n); err != nil {
 				t.Errorf("Aggregate: %v", err)
 			} else if !cmp.Equal(got, want) {
 				t.Errorf("got=%v, want=%v", got, want)
@@ -335,23 +453,23 @@ func TestRedealDecryptOld(t *testing.T) {
 				t.Fatalf("Redeal: %v", err)
 			}
 			// try to decrypt old ciphertext
-			ds := []*tdh2.DecryptionShare{}
+			ds := []*DecryptionShare{}
 			for _, sh := range shares {
-				d, err := c.Decrypt(sh)
+				d, err := Decrypt(c, sh)
 				if err != nil {
 					t.Fatalf("Decrypt: %v", err)
 				}
-				if err := c.VerifyShare(new, d); err != nil {
+				if err := VerifyShare(c, new, d); err != nil {
 					t.Fatalf("VerifyShare: %v", err)
 				}
 				ds = append(ds, d)
 			}
 			// should fail w/o enough shares
-			if _, err := c.Aggregate(ds[:tc.k-1], tc.n); err == nil {
+			if _, err := Aggregate(c, ds[:tc.k-1], tc.n); err == nil {
 				t.Error("Aggregate did not fail")
 			}
 			// try with enough shares
-			if got, err := c.Aggregate(ds[:tc.k], tc.n); err != nil {
+			if got, err := Aggregate(c, ds[:tc.k], tc.n); err != nil {
 				t.Errorf("Aggregate: %v", err)
 			} else if !cmp.Equal(got, want) {
 				t.Errorf("got=%v, want=%v", got, want)
@@ -374,12 +492,12 @@ func TestRedealReuseOldShares(t *testing.T) {
 		t.Fatalf("Encrypt: %v", err)
 	}
 	// use old share for decryption
-	ds, err := c.Decrypt(shares[0])
+	ds, err := Decrypt(c, shares[0])
 	if err != nil {
 		t.Fatalf("Decrypt: %v", err)
 	}
 	// make sure old shares cannot be used for new encryptions
-	if err := c.VerifyShare(newPk, ds); err == nil {
+	if err := VerifyShare(c, newPk, ds); err == nil {
 		t.Error("VerifyShare did not fail")
 	}
 }
@@ -399,7 +517,7 @@ func FuzzCiphertextMarshal(f *testing.F) {
 		if len(key) != tdh2.InputSize {
 			t.Skip()
 		}
-		tdh2Ctxt, err := tdh2.Encrypt(pk, key, tdh2Input, xof)
+		tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, tdh2Input, xof)
 		if err != nil {
 			t.Fatalf("Encrypt(%v): %v", key, err)
 		}
@@ -424,7 +542,7 @@ func FuzzCiphertextUnmarshal(f *testing.F) {
 	if err != nil {
 		f.Fatalf("Keys: %v", err)
 	}
-	tdh2Ctxt, err := tdh2.Encrypt(pk, make([]byte, tdh2.InputSize), make([]byte, tdh2.InputSize), keccak.New(nil))
+	tdh2Ctxt, err := tdh2.Encrypt(pk.p, make([]byte, tdh2.InputSize), make([]byte, tdh2.InputSize), keccak.New(nil))
 	if err != nil {
 		f.Fatalf("Encrypt: %v", err)
 	}
