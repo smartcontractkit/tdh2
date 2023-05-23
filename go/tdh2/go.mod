@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/google/go-cmp v0.5.9
-	github.com/smartcontractkit/tdh2 v0.0.0-20230523083904-ccb0d2ebd7d4
 	go.dedis.ch/kyber/v3 v3.1.0
 )
 
