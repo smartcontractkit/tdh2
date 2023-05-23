@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/smartcontractkit/libocr v0.0.0-20230503222226-29f534b2de1a
-	github.com/smartcontractkit/tdh2 v0.0.0-20230523083904-ccb0d2ebd7d4
+	github.com/smartcontractkit/tdh2/go/tdh2 v0.0.0-20230523211009-fd9406f09967
 	google.golang.org/protobuf v1.30.0
 )
 
