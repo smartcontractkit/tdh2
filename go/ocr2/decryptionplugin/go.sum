@@ -13,6 +13,8 @@ github.com/smartcontractkit/libocr v0.0.0-20230503222226-29f534b2de1a h1:NFTlIAj
 github.com/smartcontractkit/libocr v0.0.0-20230503222226-29f534b2de1a/go.mod h1:5JnCHuYgmIP9ZyXzgAfI5Iwu0WxBtBKp+ApeT5o1Cjw=
 github.com/smartcontractkit/tdh2 v0.0.0-20230511164021-4539b60002c0 h1:OMhFJhSX9+o09JuNQRrZCjBHtyii0Gj+9W9EBayoWjI=
 github.com/smartcontractkit/tdh2 v0.0.0-20230511164021-4539b60002c0/go.mod h1:37DpReCODOYar/xLkieKH/DKeI3ubU3QKSDOjQX1QnY=
+github.com/smartcontractkit/tdh2 v0.0.0-20230522204659-2c9d95ba61b4 h1:VFt5VBzHTNfl2nWbn8vgav5LXg0ljtdEsc3tCPALwSs=
+github.com/smartcontractkit/tdh2 v0.0.0-20230522204659-2c9d95ba61b4/go.mod h1:37DpReCODOYar/xLkieKH/DKeI3ubU3QKSDOjQX1QnY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
