@@ -9,7 +9,7 @@ import (
 	"github.com/smartcontractkit/libocr/commontypes"
 	"github.com/smartcontractkit/libocr/offchainreporting2/types"
 	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin/config"
-	"github.com/smartcontractkit/tdh2/go/tdh2easy"
+	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
 	"google.golang.org/protobuf/proto"
 )
 
