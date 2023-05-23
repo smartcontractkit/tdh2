@@ -1,0 +1,6 @@
+go 1.19
+
+use (
+	./ocr2/decryptionplugin
+	./tdh2
+)
