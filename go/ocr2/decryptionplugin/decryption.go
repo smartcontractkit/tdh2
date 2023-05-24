@@ -94,16 +94,16 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 	queryProto := Query{}
 	for _, request := range decryptionRequests {
 		ciphertext := &tdh2easy.Ciphertext{}
-		if err := ciphertext.UnmarshalVerify(request.ciphertext, dp.publicKey); err != nil {
+		if err := ciphertext.UnmarshalVerify(request.Ciphertext, dp.publicKey); err != nil {
 			dp.logger.Error("DecryptionReporting Query: cannot unmarshal the ciphertext, skipping it", commontypes.LogFields{
 				"error":        err,
-				"ciphertextID": request.ciphertextId,
+				"ciphertextID": request.CiphertextId,
 			})
 			continue
 		}
 		queryProto.DecryptionRequests = append(queryProto.GetDecryptionRequests(), &CiphertextWithID{
-			CiphertextId: request.ciphertextId,
-			Ciphertext:   request.ciphertext,
+			CiphertextId: request.CiphertextId,
+			Ciphertext:   request.Ciphertext,
 		})
 	}
 

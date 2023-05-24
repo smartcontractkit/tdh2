@@ -7,8 +7,8 @@ var ErrNotFound = errors.New("not found")
 type CiphertextId = []byte
 
 type DecryptionRequest struct {
-	ciphertextId CiphertextId
-	ciphertext   []byte
+	CiphertextId CiphertextId
+	Ciphertext   []byte
 }
 
 type DecryptionQueuingService interface {
