@@ -32,7 +32,7 @@ type queue struct {
 	res [][]byte
 }
 
-func (q queue) GetRequests(requestCountLimit, totalBytesLimit int) []DecryptionRequest {
+func (q *queue) GetRequests(requestCountLimit, totalBytesLimit int) []DecryptionRequest {
 	stop := 0
 	for i, tot := 0, 0; i < len(q.q) && i < requestCountLimit; i++ {
 		tot += len(q.q[i].Ciphertext)
@@ -46,7 +46,7 @@ func (q queue) GetRequests(requestCountLimit, totalBytesLimit int) []DecryptionR
 	return out
 }
 
-func (q queue) GetCiphertext(ciphertextId []byte) ([]byte, error) {
+func (q *queue) GetCiphertext(ciphertextId []byte) ([]byte, error) {
 	for _, e := range q.q {
 		if bytes.Equal(ciphertextId, e.CiphertextId) {
 			return e.Ciphertext, nil
@@ -55,7 +55,7 @@ func (q queue) GetCiphertext(ciphertextId []byte) ([]byte, error) {
 	return nil, ErrNotFound
 }
 
-func (q queue) SetResult(ciphertextId, plaintext []byte) {
+func (q *queue) SetResult(ciphertextId, plaintext []byte) {
 	q.res = append(q.res, ciphertextId)
 	q.res = append(q.res, plaintext)
 }
@@ -351,6 +351,69 @@ func TestQuery(t *testing.T) {
 				t.Fatalf("Unmarshal: %v", err)
 			}
 			if d := cmp.Diff(got.DecryptionRequests, tc.want, cmpopts.IgnoreUnexported(CiphertextWithID{})); d != "" {
+				t.Errorf("got/want diff=%v", d)
+			}
+		})
+	}
+}
+
+func TestShouldAcceptFinalizedReport(t *testing.T) {
+	r := &Report{
+		ProcessedDecryptedRequests: []*ProcessedDecryptionRequest{
+			{
+				CiphertextId: []byte("id1"),
+				Plaintext:    []byte("p1"),
+			},
+			{
+				CiphertextId: []byte("id2"),
+				Plaintext:    []byte("p2"),
+			},
+			{
+				CiphertextId: []byte("id3"),
+				Plaintext:    []byte("p3"),
+			},
+		},
+	}
+	b, err := proto.Marshal(r)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	for _, tc := range []struct {
+		name string
+		in   []byte
+		want [][]byte
+		err  error
+	}{
+		{
+			name: "empty",
+		},
+		{
+			name: "broken",
+			in:   []byte("broken"),
+			err:  cmpopts.AnyError,
+		},
+		{
+			name: "ok",
+			in:   b,
+			want: [][]byte{[]byte("id1"), []byte("p1"), []byte("id2"), []byte("p2"), []byte("id3"), []byte("p3")},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dp := &decryptionPlugin{
+				logger:          dummyLogger{},
+				decryptionQueue: &queue{},
+			}
+			transmit, err := dp.ShouldAcceptFinalizedReport(context.Background(), types.ReportTimestamp{}, tc.in)
+			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
+				t.Fatalf("err=%v, want=%v", err, tc.err)
+			} else if err != nil {
+				return
+			}
+			if transmit {
+				t.Errorf("ShouldAcceptFinalizedReport returned true")
+			}
+			q := dp.decryptionQueue.(*queue)
+			if d := cmp.Diff(q.res, tc.want); d != "" {
 				t.Errorf("got/want diff=%v", d)
 			}
 		})
