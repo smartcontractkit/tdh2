@@ -12,8 +12,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/smartcontractkit/libocr v0.0.0-20230503222226-29f534b2de1a h1:NFTlIAjSwx9vBYZeUerd0DDsvg+zZ5TSESw4dPNdwJk=
 github.com/smartcontractkit/libocr v0.0.0-20230503222226-29f534b2de1a/go.mod h1:5JnCHuYgmIP9ZyXzgAfI5Iwu0WxBtBKp+ApeT5o1Cjw=
-github.com/smartcontractkit/tdh2 v0.0.0-20230523083904-ccb0d2ebd7d4 h1:dFozHOgWYCh3qVrv9274+d14GvgKmVyGbY18SS93ZSU=
-github.com/smartcontractkit/tdh2 v0.0.0-20230523083904-ccb0d2ebd7d4/go.mod h1:37DpReCODOYar/xLkieKH/DKeI3ubU3QKSDOjQX1QnY=
+github.com/smartcontractkit/tdh2/go/tdh2 v0.0.0-20230524070358-28006f3fdc99 h1:XkM9YPlI0uUxp4INWXk/Nxc+k/QhSPpi04owatSR3t4=
+github.com/smartcontractkit/tdh2/go/tdh2 v0.0.0-20230524070358-28006f3fdc99/go.mod h1:Jf9J8VVTgeONnXq/Dtv634P+JxbSn5IK2lNww84PiIY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
