@@ -1,6 +1,7 @@
 package decryptionplugin
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -148,4 +149,89 @@ func TestNewReportingPlugin(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetValidDecryptionShare(t *testing.T) {
+	_, pk, sh, err := tdh2easy.GenerateKeys(1, 2)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	c, err := tdh2easy.Encrypt(pk, []byte("msg"))
+	if err != nil {
+		t.Fatalf("Encrypt: %v", err)
+	}
+	ds, err := tdh2easy.Decrypt(c, sh[1])
+	if err != nil {
+		t.Fatalf("Decrypt: %v", err)
+	}
+	dsRaw, err := ds.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	c2, err := tdh2easy.Encrypt(pk, []byte("msg2"))
+	if err != nil {
+		t.Fatalf("Encrypt: %v", err)
+	}
+	dp := &decryptionPlugin{
+		oracleToKeyShare: map[commontypes.OracleID]int{
+			10:  0,
+			123: 1,
+		},
+		publicKey: pk,
+	}
+	for _, tc := range []struct {
+		name  string
+		id    commontypes.OracleID
+		c     *tdh2easy.Ciphertext
+		share []byte
+		err   error
+	}{
+		{
+			name:  "ok",
+			id:    123,
+			c:     c,
+			share: dsRaw,
+		},
+		{
+			name:  "no oracle",
+			id:    1,
+			c:     c,
+			share: dsRaw,
+			err:   cmpopts.AnyError,
+		},
+		{
+			name:  "wrong index",
+			id:    10,
+			c:     c,
+			share: dsRaw,
+			err:   cmpopts.AnyError,
+		},
+		{
+			name:  "wrong share",
+			id:    123,
+			c:     c2,
+			share: dsRaw,
+			err:   cmpopts.AnyError,
+		},
+		{
+			name:  "broken ds",
+			id:    123,
+			c:     c,
+			share: []byte("broken"),
+			err:   cmpopts.AnyError,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := dp.getValidDecryptionShare(tc.id, tc.c, tc.share)
+			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
+				t.Fatalf("err=%v, want=%v", err, tc.err)
+			} else if err != nil {
+				return
+			}
+			if !reflect.DeepEqual(got, ds) {
+				t.Errorf("got ds=%v, want=%v", got, ds)
+			}
+		})
+	}
+
 }
