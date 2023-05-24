@@ -3,6 +3,7 @@ module github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin
 go 1.20
 
 require (
+	github.com/google/go-cmp v0.5.9
 	github.com/smartcontractkit/libocr v0.0.0-20230503222226-29f534b2de1a
 	github.com/smartcontractkit/tdh2 v0.0.0-20230522204659-2c9d95ba61b4
 	google.golang.org/protobuf v1.30.0

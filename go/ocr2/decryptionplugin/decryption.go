@@ -35,7 +35,7 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 		f.Logger.Error("unable to decode reporting plugin config", commontypes.LogFields{
 			"configDigest": rpConfig.ConfigDigest.String(),
 		})
-		return nil, types.ReportingPluginInfo{}, fmt.Errorf("unalbe to decode reporting plugin config: %w", err)
+		return nil, types.ReportingPluginInfo{}, fmt.Errorf("unable to decode reporting plugin config: %w", err)
 	}
 
 	info := types.ReportingPluginInfo{
@@ -53,7 +53,7 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 	for _, entry := range pluginConfig.Config.OracleIdToKeyIndex {
 		oID, ksID, err := config.DecodeOracleIdtoKeyShareIndex(entry)
 		if err != nil {
-			return nil, types.ReportingPluginInfo{}, fmt.Errorf("unalbe to decode reporting plugin oracle id to key Share index mapping: %w", err)
+			return nil, types.ReportingPluginInfo{}, fmt.Errorf("unable to decode reporting plugin oracle id to key Share index mapping: %w", err)
 		}
 		oracleToKeyShare[oID] = ksID
 	}
