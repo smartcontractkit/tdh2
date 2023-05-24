@@ -2,6 +2,8 @@ package decryptionplugin
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/smartcontractkit/libocr/offchainreporting2/types"
 	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin/config"
 	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
+	"google.golang.org/protobuf/proto"
 )
 
 // dummyLogger implements a dummy logger for testing only.
@@ -270,4 +273,86 @@ func TestGetValidDecryptionShare(t *testing.T) {
 		})
 	}
 
+}
+
+func TestQuery(t *testing.T) {
+	_, pk, _, err := tdh2easy.GenerateKeys(1, 2)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	ctxts := []*CiphertextWithID{}
+	for i := 0; i < 10; i++ {
+		id := []byte(fmt.Sprintf("%d", i))
+		c, err := tdh2easy.Encrypt(pk, id)
+		if err != nil {
+			t.Fatalf("Encrypt: %v", err)
+		}
+		raw, err := c.Marshal()
+		if err != nil {
+			t.Fatalf("Marshal: %v", err)
+		}
+		ctxts = append(ctxts, &CiphertextWithID{
+			CiphertextId: id,
+			Ciphertext:   raw,
+		})
+	}
+	for _, tc := range []struct {
+		name string
+		in   []*CiphertextWithID
+		want []*CiphertextWithID
+	}{
+		{
+			name: "empty",
+		},
+		{
+			name: "one",
+			in:   ctxts[:1],
+			want: ctxts[:1],
+		},
+		{
+			name: "all",
+			in:   ctxts,
+			want: ctxts,
+		},
+		{
+			name: "one wrong",
+			in: append(ctxts, &CiphertextWithID{
+				CiphertextId: []byte("1"),
+				Ciphertext:   []byte("broken"),
+			}),
+			want: ctxts,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			q := &queue{}
+			for _, e := range tc.in {
+				q.q = append(q.q, DecryptionRequest{
+					CiphertextId: e.CiphertextId,
+					Ciphertext:   e.Ciphertext,
+				})
+			}
+			dp := &decryptionPlugin{
+				logger:    dummyLogger{},
+				publicKey: pk,
+				specificConfig: &config.ReportingPluginConfigWrapper{
+					Config: &config.ReportingPluginConfig{
+						RequestCountLimit:      999,
+						RequestTotalBytesLimit: 999999,
+					},
+				},
+				decryptionQueue: q,
+			}
+			b, err := dp.Query(context.Background(), types.ReportTimestamp{})
+			if err != nil {
+				t.Fatalf("Query: %v", err)
+			}
+			got := Query{}
+			if err := proto.Unmarshal(b, &got); err != nil {
+				t.Fatalf("Unmarshal: %v", err)
+			}
+			if d := cmp.Diff(got.DecryptionRequests, tc.want, cmpopts.IgnoreUnexported(CiphertextWithID{})); d != "" {
+				t.Errorf("got/want diff=%v", d)
+			}
+		})
+	}
 }
