@@ -1,6 +1,7 @@
 package decryptionplugin
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
 )
 
+// dummyLogger implements a dummy logger for testing only.
 type dummyLogger struct{}
 
 func (l dummyLogger) Trace(msg string, fields commontypes.LogFields)    {}
@@ -20,6 +22,40 @@ func (l dummyLogger) Info(msg string, fields commontypes.LogFields)     {}
 func (l dummyLogger) Warn(msg string, fields commontypes.LogFields)     {}
 func (l dummyLogger) Error(msg string, fields commontypes.LogFields)    {}
 func (l dummyLogger) Critical(msg string, fields commontypes.LogFields) {}
+
+// queue implements the DecryptionQueuingService interface.
+type queue struct {
+	q   []DecryptionRequest
+	res [][]byte
+}
+
+func (q queue) GetRequests(requestCountLimit, totalBytesLimit int) []DecryptionRequest {
+	stop := 0
+	for i, tot := 0, 0; i < len(q.q) && i < requestCountLimit; i++ {
+		tot += len(q.q[i].Ciphertext)
+		if tot > totalBytesLimit {
+			break
+		}
+		stop++
+	}
+	out := q.q[:stop]
+	q.q = q.q[stop:]
+	return out
+}
+
+func (q queue) GetCiphertext(ciphertextId []byte) ([]byte, error) {
+	for _, e := range q.q {
+		if bytes.Equal(ciphertextId, e.CiphertextId) {
+			return e.Ciphertext, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
+func (q queue) SetResult(ciphertextId, plaintext []byte) {
+	q.res = append(q.res, ciphertextId)
+	q.res = append(q.res, plaintext)
+}
 
 func makeConfig(t *testing.T, c *config.ReportingPluginConfig) types.ReportingPluginConfig {
 	conf, err := config.EncodeReportingPluginConfig(&config.ReportingPluginConfigWrapper{
