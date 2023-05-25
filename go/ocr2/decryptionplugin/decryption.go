@@ -253,7 +253,6 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 					"ciphertextID": ciphertextID,
 					"observer":     ob.Observer,
 				})
-				break
 			}
 		}
 	}
