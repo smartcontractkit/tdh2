@@ -47,6 +47,9 @@ func (q *queue) GetRequests(requestCountLimit, totalBytesLimit int) []Decryption
 }
 
 func (q *queue) GetCiphertext(ciphertextId []byte) ([]byte, error) {
+	if bytes.Equal([]byte("please fail"), ciphertextId) {
+		return nil, fmt.Errorf("some error")
+	}
 	for _, e := range q.q {
 		if bytes.Equal(ciphertextId, e.CiphertextId) {
 			return e.Ciphertext, nil
@@ -61,6 +64,7 @@ func (q *queue) SetResult(ciphertextId, plaintext []byte) {
 }
 
 func makeConfig(t *testing.T, c *config.ReportingPluginConfig) types.ReportingPluginConfig {
+	t.Helper()
 	conf, err := config.EncodeReportingPluginConfig(&config.ReportingPluginConfigWrapper{
 		Config: c,
 	})
@@ -415,6 +419,171 @@ func TestShouldAcceptFinalizedReport(t *testing.T) {
 			q := dp.decryptionQueue.(*queue)
 			if d := cmp.Diff(q.res, tc.want); d != "" {
 				t.Errorf("got/want diff=%v", d)
+			}
+		})
+	}
+}
+
+func makeQuery(t *testing.T, c []*CiphertextWithID) []byte {
+	t.Helper()
+	b, err := proto.Marshal(&Query{
+		DecryptionRequests: c,
+	})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	return b
+}
+
+type ctxtWithId struct {
+	id []byte
+	c  *tdh2easy.Ciphertext
+}
+
+func TestObservation(t *testing.T) {
+	_, pk, sh, err := tdh2easy.GenerateKeys(1, 2)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	q := &queue{}
+	ctxts := []*ctxtWithId{}
+	ctxtsRaw := []*CiphertextWithID{}
+	for i := 0; i < 10; i++ {
+		id := []byte(fmt.Sprintf("%d", i))
+		c, err := tdh2easy.Encrypt(pk, id)
+		if err != nil {
+			t.Fatalf("Encrypt: %v", err)
+		}
+		raw, err := c.Marshal()
+		if err != nil {
+			t.Fatalf("Marshal: %v", err)
+		}
+		ctxtsRaw = append(ctxtsRaw, &CiphertextWithID{
+			CiphertextId: id,
+			Ciphertext:   raw,
+		})
+		// add only 5 to the queue
+		if i < 5 {
+			q.q = append(q.q, DecryptionRequest{
+				CiphertextId: id,
+				Ciphertext:   raw,
+			})
+		}
+		ctxts = append(ctxts, &ctxtWithId{
+			id: id,
+			c:  c,
+		})
+	}
+	for _, tc := range []struct {
+		name  string
+		query []byte
+		local bool
+		queue DecryptionQueuingService
+		err   error
+		want  []*ctxtWithId
+	}{
+		{
+			name:  "broken",
+			query: []byte("broken"),
+			err:   cmpopts.AnyError,
+		},
+		{
+			name:  "empty",
+			query: makeQuery(t, nil),
+		},
+		{
+			name:  "one",
+			query: makeQuery(t, ctxtsRaw[:1]),
+			want:  ctxts[:1],
+		},
+		{
+			name:  "many",
+			query: makeQuery(t, ctxtsRaw),
+			want:  ctxts,
+		},
+		{
+			name:  "many locally queued",
+			query: makeQuery(t, ctxtsRaw[:5]),
+			local: true,
+			queue: q,
+			want:  ctxts[:5],
+		},
+		{
+			name:  "some locally queued, some not found",
+			query: makeQuery(t, ctxtsRaw),
+			local: true,
+			queue: q,
+			want:  ctxts[:5],
+		},
+		{
+			name: "queue failing",
+			query: makeQuery(t, append(ctxtsRaw[:5], &CiphertextWithID{
+				CiphertextId: []byte("please fail"),
+				Ciphertext:   ctxtsRaw[5].Ciphertext,
+			})),
+			local: true,
+			queue: q,
+			want:  ctxts[:5],
+		},
+		{
+			name: "queued ciphertext mismatch",
+			query: makeQuery(t, append(ctxtsRaw[:4], &CiphertextWithID{
+				CiphertextId: ctxtsRaw[4].CiphertextId,
+				Ciphertext:   ctxtsRaw[5].Ciphertext,
+			})),
+			local: true,
+			queue: q,
+			want:  ctxts[:4],
+		},
+		{
+			name: "broken ciphertext",
+			query: makeQuery(t, append(ctxtsRaw[:3], &CiphertextWithID{
+				CiphertextId: []byte("id"),
+				Ciphertext:   []byte("broken"),
+			})),
+			err: cmpopts.AnyError,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dp := &decryptionPlugin{
+				logger:       dummyLogger{},
+				publicKey:    pk,
+				privKeyShare: sh[1],
+				specificConfig: &config.ReportingPluginConfigWrapper{
+					Config: &config.ReportingPluginConfig{
+						RequireLocalRequestCheck: tc.local,
+					},
+				},
+				decryptionQueue: tc.queue,
+			}
+			b, err := dp.Observation(context.Background(), types.ReportTimestamp{}, tc.query)
+			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
+				t.Fatalf("err=%v, want=%v", err, tc.err)
+			} else if err != nil {
+				return
+			}
+			var got Observation
+			if err := proto.Unmarshal(b, &got); err != nil {
+				t.Fatalf("Unmarshal: %v", err)
+			}
+			if a, b := len(got.DecryptionShares), len(tc.want); a != b {
+				t.Errorf("got %v dec shares, want %v", a, b)
+			}
+			for i := 0; i < len(got.DecryptionShares) && i < len(tc.want); i++ {
+				if a, b := got.DecryptionShares[i].CiphertextId, tc.want[i].id; !bytes.Equal(a, b) {
+					t.Errorf("got id=%v, want=%v", a, b)
+				}
+				var ds tdh2easy.DecryptionShare
+				if err := ds.Unmarshal(got.DecryptionShares[i].DecryptionShare); err != nil {
+					t.Errorf("Unmarshal: %v", err)
+					continue
+				}
+				if ds.Index() != 1 {
+					t.Errorf("got index=%v, want=1", ds.Index())
+				}
+				if err := tdh2easy.VerifyShare(tc.want[i].c, pk, &ds); err != nil {
+					t.Errorf("VerifyShare id=%v err=%v", tc.want[i].id, err)
+				}
 			}
 		})
 	}
