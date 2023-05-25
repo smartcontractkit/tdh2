@@ -536,3 +536,149 @@ func TestObservation(t *testing.T) {
 		})
 	}
 }
+
+func makeObservations(t *testing.T, oracle2ids map[int][]string, id2shares map[string][][]byte) []types.AttributedObservation {
+	t.Helper()
+	var out []types.AttributedObservation
+	for oracle, ids := range oracle2ids {
+		decShares := []*DecryptionShareWithID{}
+		for _, id := range ids {
+			decShares = append(decShares, &DecryptionShareWithID{
+				CiphertextId:    []byte(id),
+				DecryptionShare: id2shares[id][oracle],
+			})
+		}
+		ob, err := proto.Marshal(&Observation{
+			DecryptionShares: decShares,
+		})
+		if err != nil {
+			t.Fatalf("Marshal: %v", err)
+		}
+		out = append(out, types.AttributedObservation{
+			Observer:    commontypes.OracleID(oracle),
+			Observation: ob,
+		})
+	}
+	return out
+}
+
+func TestReport(t *testing.T) {
+	_, pk, sh, err := tdh2easy.GenerateKeys(3, 4)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	want := []*ProcessedDecryptionRequest{}
+	ctxts := []*CiphertextWithID{}
+	shares := map[string][][]byte{}
+	for i := 0; i < 3; i++ {
+		id := []byte(fmt.Sprintf("id%d", i))
+		plain := []byte(fmt.Sprintf("%d", i))
+		c, err := tdh2easy.Encrypt(pk, plain)
+		if err != nil {
+			t.Fatalf("Encrypt: %v", err)
+		}
+		raw, err := c.Marshal()
+		if err != nil {
+			t.Fatalf("Marshal: %v", err)
+		}
+		ctxts = append(ctxts, &CiphertextWithID{
+			CiphertextId: id,
+			Ciphertext:   raw,
+		})
+		want = append(want, &ProcessedDecryptionRequest{
+			CiphertextId: id,
+			Plaintext:    plain,
+		})
+		for _, s := range sh {
+			ds, err := tdh2easy.Decrypt(c, s)
+			if err != nil {
+				t.Fatalf("Decrypt: %v", err)
+			}
+			b, err := ds.Marshal()
+			if err != nil {
+				t.Fatalf("Marshal: %v", err)
+			}
+			shares[string(id)] = append(shares[string(id)], b)
+		}
+	}
+	for _, tc := range []struct {
+		name          string
+		query         []byte
+		obs           []types.AttributedObservation
+		err           error
+		wantProcessed bool
+		want          []*ProcessedDecryptionRequest
+	}{
+		{
+			name:  "empty",
+			query: makeQuery(t, nil),
+		},
+		{
+			name:  "broken query",
+			query: []byte("broken"),
+			err:   cmpopts.AnyError,
+		},
+		{
+			name: "broken ciphertext",
+			query: makeQuery(t, append(ctxts, &CiphertextWithID{
+				CiphertextId: []byte("id"),
+				Ciphertext:   []byte("broken"),
+			})),
+			err: cmpopts.AnyError,
+		},
+		{
+			name:  "nothing processed (no shares)",
+			query: makeQuery(t, ctxts),
+		},
+		{
+			name:  "one processed",
+			query: makeQuery(t, ctxts[:1]),
+			obs: makeObservations(t, map[int][]string{
+				0: {"id0", "id1", "id2"},
+				1: {"id0", "id1", "id2"},
+				2: {"id0", "id1", "id2"},
+				3: {"id0", "id1", "id2"},
+			}, shares),
+			wantProcessed: true,
+			want:          want[:1],
+		},
+		{
+			name:  "all processed",
+			query: makeQuery(t, ctxts),
+			obs: makeObservations(t, map[int][]string{
+				0: {"id0", "id1", "id2"},
+				1: {"id0", "id1", "id2"},
+				2: {"id0", "id1", "id2"},
+			}, shares),
+			wantProcessed: true,
+			want:          want,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dp := &decryptionPlugin{
+				logger:    dummyLogger{},
+				publicKey: pk,
+				genericConfig: &types.ReportingPluginConfig{
+					F: 2,
+				},
+				oracleToKeyShare: map[commontypes.OracleID]int{0: 0, 1: 1, 2: 2, 3: 3},
+			}
+			processed, reportBytes, err := dp.Report(context.Background(), types.ReportTimestamp{}, tc.query, tc.obs)
+			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
+				t.Fatalf("err=%v, want=%v", err, tc.err)
+			} else if err != nil {
+				return
+			}
+			if processed != tc.wantProcessed {
+				t.Errorf("got processed=%v, want=%v", processed, tc.wantProcessed)
+			}
+			var got Report
+			if err := proto.Unmarshal(reportBytes, &got); err != nil {
+				t.Errorf("Unmarshal: %v", err)
+			}
+			if d := cmp.Diff(got.ProcessedDecryptedRequests, tc.want, cmpopts.IgnoreUnexported(ProcessedDecryptionRequest{})); d != "" {
+				t.Errorf("got/want diff=%v", d)
+			}
+		})
+	}
+}
