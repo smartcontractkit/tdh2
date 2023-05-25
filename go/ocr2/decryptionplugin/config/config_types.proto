@@ -16,7 +16,4 @@ message ReportingPluginConfig {
   uint32 request_count_limit = 4;
   uint32 request_total_bytes_limit = 5;
   bool require_local_request_check = 6;
-  bytes public_key = 7;
-  bytes priv_key_share = 8;
-  repeated OracleIDtoKeyShareIndex oracle_id_to_key_index = 9;
 }
