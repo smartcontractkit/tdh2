@@ -14,8 +14,11 @@ import (
 )
 
 type DecryptionReportingPluginFactory struct {
-	DecryptionQueue DecryptionQueuingService
-	Logger          commontypes.Logger
+	DecryptionQueue  DecryptionQueuingService
+	PublicKey        *tdh2easy.PublicKey
+	PrivKeyShare     *tdh2easy.PrivateShare
+	OracleToKeyShare map[commontypes.OracleID]int
+	Logger           commontypes.Logger
 }
 
 type decryptionPlugin struct {
@@ -49,31 +52,14 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 		},
 	}
 
-	oracleToKeyShare := make(map[commontypes.OracleID]int)
-	for _, entry := range pluginConfig.Config.OracleIdToKeyIndex {
-		oID, ksID, err := config.DecodeOracleIdtoKeyShareIndex(entry)
-		if err != nil {
-			return nil, types.ReportingPluginInfo{}, fmt.Errorf("unable to decode reporting plugin oracle id to key Share index mapping: %w", err)
-		}
-		oracleToKeyShare[oID] = ksID
-	}
-
 	plugin := decryptionPlugin{
 		f.Logger,
 		f.DecryptionQueue,
-		&tdh2easy.PublicKey{},
-		&tdh2easy.PrivateShare{},
-		oracleToKeyShare,
+		f.PublicKey,
+		f.PrivKeyShare,
+		f.OracleToKeyShare,
 		&rpConfig,
 		pluginConfig,
-	}
-
-	if err = plugin.publicKey.Unmarshal(pluginConfig.Config.PublicKey); err != nil {
-		return nil, info, fmt.Errorf("cannot unmarshal public key: %w", err)
-	}
-
-	if err = plugin.privKeyShare.Unmarshal(pluginConfig.Config.PrivKeyShare); err != nil {
-		return nil, info, fmt.Errorf("cannot unmarshal private key share: %w", err)
 	}
 
 	return &plugin, info, nil

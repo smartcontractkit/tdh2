@@ -80,18 +80,6 @@ func TestNewReportingPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
-	pkRaw, err := pk.Marshal()
-	if err != nil {
-		if err != nil {
-			t.Fatalf("pk.Marshal: %v", err)
-		}
-	}
-	shRaw, err := sh[0].Marshal()
-	if err != nil {
-		if err != nil {
-			t.Fatalf("sh.Marshal: %v", err)
-		}
-	}
 	for _, tc := range []struct {
 		name string
 		conf types.ReportingPluginConfig
@@ -103,48 +91,11 @@ func TestNewReportingPlugin(t *testing.T) {
 				MaxQueryLengthBytes:       1,
 				MaxObservationLengthBytes: 2,
 				MaxReportLengthBytes:      3,
-				PublicKey:                 pkRaw,
-				PrivKeyShare:              shRaw,
-				OracleIdToKeyIndex: []*config.OracleIDtoKeyShareIndex{
-					{OracleId: 1, KeyShareIndex: 11},
-					{OracleId: 2, KeyShareIndex: 22},
-					{OracleId: 3, KeyShareIndex: 33},
-				},
 			}),
 		},
 		{
 			name: "ok minimal",
-			conf: makeConfig(t, &config.ReportingPluginConfig{
-				PublicKey:    pkRaw,
-				PrivKeyShare: shRaw,
-			}),
-		},
-		{
-			name: "broken privkey",
-			conf: makeConfig(t, &config.ReportingPluginConfig{
-				PublicKey:    pkRaw,
-				PrivKeyShare: []byte("broken"),
-			}),
-			err: cmpopts.AnyError,
-		},
-		{
-			name: "broken pubkey",
-			conf: makeConfig(t, &config.ReportingPluginConfig{
-				PublicKey:    []byte("broken"),
-				PrivKeyShare: shRaw,
-			}),
-			err: cmpopts.AnyError,
-		},
-		{
-			name: "overflow OracleID",
-			conf: makeConfig(t, &config.ReportingPluginConfig{
-				PublicKey:    pkRaw,
-				PrivKeyShare: shRaw,
-				OracleIdToKeyIndex: []*config.OracleIDtoKeyShareIndex{
-					{OracleId: 991, KeyShareIndex: 11},
-				},
-			}),
-			err: cmpopts.AnyError,
+			conf: makeConfig(t, &config.ReportingPluginConfig{}),
 		},
 		{
 			name: "broken conf",
@@ -155,7 +106,11 @@ func TestNewReportingPlugin(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			factory := DecryptionReportingPluginFactory{Logger: dummyLogger{}}
+			factory := DecryptionReportingPluginFactory{
+				Logger:       dummyLogger{},
+				PublicKey:    pk,
+				PrivKeyShare: sh[0],
+			}
 			plugin, info, err := factory.NewReportingPlugin(tc.conf)
 			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
 				t.Fatalf("err=%v, want=%v", err, tc.err)
@@ -177,18 +132,11 @@ func TestNewReportingPlugin(t *testing.T) {
 				t.Errorf("info.Limits.MaxReportLength=%v, want=%v", a, b)
 			}
 			p := plugin.(*decryptionPlugin)
-			if a, b := len(p.oracleToKeyShare), len(conf.Config.OracleIdToKeyIndex); a != b {
-				t.Errorf("oracleToKeyShare has %v entries, want %d", a, b)
+			if !reflect.DeepEqual(p.publicKey, pk) {
+				t.Errorf("got pubkey %v, want %v", p.publicKey, pk)
 			}
-			for _, e := range conf.Config.OracleIdToKeyIndex {
-				got, ok := p.oracleToKeyShare[commontypes.OracleID(e.OracleId)]
-				if !ok {
-					t.Errorf("no key share for %v", e.OracleId)
-					continue
-				}
-				if got != int(e.KeyShareIndex) {
-					t.Errorf("share index=%v, want=%v", got, int(e.KeyShareIndex))
-				}
+			if !reflect.DeepEqual(p.privKeyShare, sh[0]) {
+				t.Errorf("got privkey %v, want %v", p.privKeyShare, sh[0])
 			}
 		})
 	}
