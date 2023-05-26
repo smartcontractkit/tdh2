@@ -564,7 +564,7 @@ func makeObservations(t *testing.T, oracle2ids map[int][]string, id2shares map[s
 }
 
 func TestReport(t *testing.T) {
-	_, pk, sh, err := tdh2easy.GenerateKeys(3, 4)
+	_, pk, sh, err := tdh2easy.GenerateKeys(3, 5)
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
@@ -674,12 +674,24 @@ func TestReport(t *testing.T) {
 			want:          want,
 		},
 		{
+			name:  "all processed, more shares than needed",
+			query: makeQuery(t, ctxts),
+			obs: makeObservations(t, map[int][]string{
+				0: {"id0", "id1", "id2"},
+				1: {"id0", "id1", "id2"},
+				2: {"id0", "id1", "id2"},
+				3: {"id0", "id1", "id2"},
+			}, shares),
+			wantProcessed: true,
+			want:          want,
+		},
+		{
 			name:  "nothing processed (wrong oracle-index mapping)",
 			query: makeQuery(t, ctxts),
 			obs: makeObservations(t, map[int][]string{
 				0: {"id0", "id1", "id2"},
 				1: {"id0", "id1", "id2"},
-				3: {"id0", "id1", "id2"},
+				4: {"id0", "id1", "id2"},
 			}, shares),
 		},
 		{
@@ -708,7 +720,8 @@ func TestReport(t *testing.T) {
 					0: 0,
 					1: 1,
 					2: 2,
-					3: 4, // wrong mapping
+					3: 3,
+					4: 5, // wrong mapping
 				},
 			}
 			processed, reportBytes, err := dp.Report(context.Background(), types.ReportTimestamp{}, tc.query, tc.obs)
