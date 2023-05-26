@@ -51,7 +51,7 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 			MaxReportLength:      int(pluginConfig.Config.GetMaxReportLengthBytes()),
 		},
 	}
-	
+
 	plugin := decryptionPlugin{
 		f.Logger,
 		f.DecryptionQueue,
@@ -247,13 +247,13 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 				continue
 			}
 
-			validDecryptionShares[ciphertextID] = append(validDecryptionShares[ciphertextID], validDecryptionShare)
-			if len(validDecryptionShares[ciphertextID]) >= fPlusOne {
+			if len(validDecryptionShares[ciphertextID]) < fPlusOne {
+				validDecryptionShares[ciphertextID] = append(validDecryptionShares[ciphertextID], validDecryptionShare)
+			} else {
 				dp.logger.Trace("DecryptionReporting Report: we have already f+1 valid decryption shares", commontypes.LogFields{
 					"ciphertextID": ciphertextID,
 					"observer":     ob.Observer,
 				})
-				break
 			}
 		}
 	}
