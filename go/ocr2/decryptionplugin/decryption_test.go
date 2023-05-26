@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -570,6 +571,7 @@ func TestReport(t *testing.T) {
 	want := []*ProcessedDecryptionRequest{}
 	ctxts := []*CiphertextWithID{}
 	shares := map[string][][]byte{}
+	// generate id-plaintext pairs, "id0"->"0", "id1"->"1", "id2"->"2"
 	for i := 0; i < 3; i++ {
 		id := []byte(fmt.Sprintf("id%d", i))
 		plain := []byte(fmt.Sprintf("%d", i))
@@ -631,16 +633,34 @@ func TestReport(t *testing.T) {
 			query: makeQuery(t, ctxts),
 		},
 		{
+			name:  "nothing processed (no enough shares)",
+			query: makeQuery(t, ctxts),
+			obs: makeObservations(t, map[int][]string{
+				0: {"id0", "id1", "id2"},
+				1: {"id0", "id1", "id2"},
+			}, shares),
+		},
+		{
 			name:  "one processed",
 			query: makeQuery(t, ctxts[:1]),
 			obs: makeObservations(t, map[int][]string{
 				0: {"id0", "id1", "id2"},
 				1: {"id0", "id1", "id2"},
 				2: {"id0", "id1", "id2"},
-				3: {"id0", "id1", "id2"},
 			}, shares),
 			wantProcessed: true,
 			want:          want[:1],
+		},
+		{
+			name:  "two processed",
+			query: makeQuery(t, ctxts),
+			obs: makeObservations(t, map[int][]string{
+				0: {"id0", "id1", "id2"},
+				1: {"id0", "id1", "id2"},
+				2: {"id0", "id1"},
+			}, shares),
+			wantProcessed: true,
+			want:          want[:2],
 		},
 		{
 			name:  "all processed",
@@ -653,6 +673,29 @@ func TestReport(t *testing.T) {
 			wantProcessed: true,
 			want:          want,
 		},
+		{
+			name:  "nothing processed (wrong oracle-index mapping)",
+			query: makeQuery(t, ctxts),
+			obs: makeObservations(t, map[int][]string{
+				0: {"id0", "id1", "id2"},
+				1: {"id0", "id1", "id2"},
+				3: {"id0", "id1", "id2"},
+			}, shares),
+		},
+		{
+			name:  "all processed, one broken obs",
+			query: makeQuery(t, ctxts),
+			obs: append(makeObservations(t, map[int][]string{
+				0: {"id0", "id1", "id2"},
+				1: {"id0", "id1", "id2"},
+				2: {"id0", "id1", "id2"},
+			}, shares), types.AttributedObservation{
+				Observer:    4,
+				Observation: []byte("broken"),
+			}),
+			wantProcessed: true,
+			want:          want,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dp := &decryptionPlugin{
@@ -661,7 +704,12 @@ func TestReport(t *testing.T) {
 				genericConfig: &types.ReportingPluginConfig{
 					F: 2,
 				},
-				oracleToKeyShare: map[commontypes.OracleID]int{0: 0, 1: 1, 2: 2, 3: 3},
+				oracleToKeyShare: map[commontypes.OracleID]int{
+					0: 0,
+					1: 1,
+					2: 2,
+					3: 4, // wrong mapping
+				},
 			}
 			processed, reportBytes, err := dp.Report(context.Background(), types.ReportTimestamp{}, tc.query, tc.obs)
 			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
@@ -672,11 +720,16 @@ func TestReport(t *testing.T) {
 			if processed != tc.wantProcessed {
 				t.Errorf("got processed=%v, want=%v", processed, tc.wantProcessed)
 			}
-			var got Report
-			if err := proto.Unmarshal(reportBytes, &got); err != nil {
+			var report Report
+			if err := proto.Unmarshal(reportBytes, &report); err != nil {
 				t.Errorf("Unmarshal: %v", err)
 			}
-			if d := cmp.Diff(got.ProcessedDecryptedRequests, tc.want, cmpopts.IgnoreUnexported(ProcessedDecryptionRequest{})); d != "" {
+			// make sure processed requests are sorted before comparison
+			got := report.ProcessedDecryptedRequests
+			sort.Slice(got, func(i, j int) bool {
+				return string(got[i].CiphertextId) < string(got[j].CiphertextId)
+			})
+			if d := cmp.Diff(got, tc.want, cmpopts.IgnoreUnexported(ProcessedDecryptionRequest{})); d != "" {
 				t.Errorf("got/want diff=%v", d)
 			}
 		})
