@@ -25,3 +25,11 @@ jobs:
         run: |
           go build -v ./...
           go test -v ./...
+
+      - name: Download npm deps
+        working-directory: ./js/tdh2
+        run: npm install
+
+      - name: Test TDH2 Go-JS
+        working-directory: ./js/tdh2/test
+        run: go test -v ./...
