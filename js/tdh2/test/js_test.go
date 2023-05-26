@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/smartcontractkit/tdh2/go/tdh2easy"
+	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
 )
 
 func TestJS(t *testing.T) {
