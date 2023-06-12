@@ -1,16 +1,16 @@
-package test
+package tdh2easy
 
 import (
 	"bytes"
 	"encoding/base64"
 	"os/exec"
 	"testing"
-
-	"github.com/smartcontractkit/tdh2/go/tdh2easy"
 )
 
+const jsTestPath = "../../../js/tdh2/test/test.js"
+
 func TestJS(t *testing.T) {
-	_, pk, sh, err := tdh2easy.GenerateKeys(2, 3)
+	_, pk, sh, err := GenerateKeys(2, 3)
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
@@ -19,7 +19,7 @@ func TestJS(t *testing.T) {
 		t.Fatalf("Marshal: %v", err)
 	}
 
-	cmdArgs := []string{"test.js", string(b)}
+	cmdArgs := []string{jsTestPath, string(b)}
 	cmd := exec.Command("node", cmdArgs...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -36,19 +36,19 @@ func TestJS(t *testing.T) {
 		if err != nil {
 			t.Fatalf("b64Decode: %v", err)
 		}
-		var c tdh2easy.Ciphertext
+		var c Ciphertext
 		if err := c.UnmarshalVerify(pairs[2*i+1], pk); err != nil {
 			t.Fatalf("Unmarshal: %v", err)
 		}
-		dec := []*tdh2easy.DecryptionShare{}
+		dec := []*DecryptionShare{}
 		for _, s := range sh {
-			d, err := tdh2easy.Decrypt(&c, s)
+			d, err := Decrypt(&c, s)
 			if err != nil {
 				t.Fatalf("Decrypt: %v", err)
 			}
 			dec = append(dec, d)
 		}
-		got, err := tdh2easy.Aggregate(&c, dec, 3)
+		got, err := Aggregate(&c, dec, 3)
 		if err != nil {
 			t.Fatalf("Aggregate: %v", err)
 		}
