@@ -8,9 +8,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/nist"
 	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2"
-	"go.dedis.ch/kyber/v3/group/nist"
-	"go.dedis.ch/kyber/v3/xof/keccak"
 )
 
 func TestShareIndex(t *testing.T) {
@@ -135,7 +134,11 @@ func TestCiphertextDecrypt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
-	_, _, wrong, err := tdh2.GenerateKeys(nist.NewBlakeSHA256QR512(), nil, 1, 1, keccak.New(nil))
+	r, err := randStream()
+	if err != nil {
+		t.Fatalf("RandStream: %v", err)
+	}
+	_, _, wrong, err := tdh2.GenerateKeys(nist.NewP521(), nil, 1, 1, r)
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
@@ -507,9 +510,9 @@ func FuzzCiphertextMarshal(f *testing.F) {
 	if err != nil {
 		f.Fatalf("Keys: %v", err)
 	}
-	xof, err := xof()
+	r, err := randStream()
 	if err != nil {
-		f.Fatalf("xof: %v", err)
+		f.Fatalf("randStream: %v", err)
 	}
 	tdh2Input := make([]byte, tdh2.InputSize)
 	f.Add(tdh2Input, []byte("symcCtxt"), []byte("nonce"))
@@ -517,7 +520,7 @@ func FuzzCiphertextMarshal(f *testing.F) {
 		if len(key) != tdh2.InputSize {
 			t.Skip()
 		}
-		tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, tdh2Input, xof)
+		tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, tdh2Input, r)
 		if err != nil {
 			t.Fatalf("Encrypt(%v): %v", key, err)
 		}
@@ -542,7 +545,11 @@ func FuzzCiphertextUnmarshal(f *testing.F) {
 	if err != nil {
 		f.Fatalf("Keys: %v", err)
 	}
-	tdh2Ctxt, err := tdh2.Encrypt(pk.p, make([]byte, tdh2.InputSize), make([]byte, tdh2.InputSize), keccak.New(nil))
+	r, err := randStream()
+	if err != nil {
+		f.Fatalf("ranStream: %v", err)
+	}
+	tdh2Ctxt, err := tdh2.Encrypt(pk.p, make([]byte, tdh2.InputSize), make([]byte, tdh2.InputSize), r)
 	if err != nil {
 		f.Fatalf("Encrypt: %v", err)
 	}
