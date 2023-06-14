@@ -2,6 +2,7 @@ package tdh2
 
 import (
 	"bytes"
+	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/json"
@@ -11,20 +12,43 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/kyber/v3/group/nist"
-	"go.dedis.ch/kyber/v3/xof/keccak"
+	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
+	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/nist"
 )
 
 var supportedGroups = []string{
-	nist.NewBlakeSHA256P256().String(),
+	nist.NewP256().String(),
+	nist.NewP384().String(),
+	nist.NewP521().String(),
+}
+
+// unsupported implements an unsupported group
+type unsupported nist.P256
+
+func (u *unsupported) String() string {
+	return "unsupported"
+}
+func newUnsupported() *unsupported {
+	return (*unsupported)(nist.NewP256())
 }
 
 type common interface {
 	Fatalf(format string, args ...interface{})
 }
 
-func params(t common, group string) (kyber.Group, cipher.Stream, []byte, []byte) {
+func randStream(t common) cipher.Stream {
+	block, err := aes.NewCipher(make([]byte, 16))
+	if err != nil {
+		t.Fatalf("NewCipher: %v", err)
+	}
+	iv := make([]byte, aes.BlockSize)
+	if _, err := rand.Read(iv); err != nil {
+		t.Fatalf("Read: %w", err)
+	}
+	return cipher.NewCTR(block, iv)
+}
+
+func params(t common, group string) (group.Group, cipher.Stream, []byte, []byte) {
 	if _, ok := t.(*testing.T); ok {
 		t.(*testing.T).Helper()
 	}
@@ -44,7 +68,7 @@ func params(t common, group string) (kyber.Group, cipher.Stream, []byte, []byte)
 	if err != nil {
 		t.Fatalf("parseGroup: %v", err)
 	}
-	return g, keccak.New(seed), msg, label
+	return g, randStream(t), msg, label
 }
 
 func TestConcatenate(t *testing.T) {
@@ -216,7 +240,7 @@ func TestGenerateKeys(t *testing.T) {
 			{
 				name: "secret wrong group",
 				ms: &MasterSecret{
-					group: nist.NewBlakeSHA256QR512(),
+					group: newUnsupported(),
 					s:     group.Scalar().Pick(rand)},
 				k:   1,
 				n:   1,
@@ -312,7 +336,7 @@ func TestEncrypt(t *testing.T) {
 }
 
 func TestDecrypt(t *testing.T) {
-	wrong := nist.NewBlakeSHA256QR512()
+	wrong := newUnsupported()
 	for _, typ := range supportedGroups {
 		group, rand, msg, label := params(t, typ)
 		_, pk, shares, err := GenerateKeys(group, nil, 3, 5, rand)
@@ -391,7 +415,7 @@ func TestCtxtVerify(t *testing.T) {
 			{
 				name: "wrong group",
 				ctxt: &Ciphertext{
-					group: nist.NewBlakeSHA256QR512(),
+					group: newUnsupported(),
 					c:     ctxt.c,
 					label: ctxt.label,
 					u:     ctxt.u,
@@ -593,7 +617,7 @@ func TestVerifyShare(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GenerateKeys: %v", err)
 		}
-		wrong := nist.NewBlakeSHA256QR512()
+		wrong := newUnsupported()
 		ctxt, err := Encrypt(pk, msg, label, rand)
 		if err != nil {
 			t.Fatalf("Encrypt: %v", err)
@@ -695,7 +719,7 @@ func TestCombineShares(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GenerateKeys: %v", err)
 		}
-		wrong := nist.NewBlakeSHA256QR512()
+		wrong := newUnsupported()
 		_, pkWrong, _, err := GenerateKeys(group, nil, 3, 5, rand)
 		if err != nil {
 			t.Fatalf("GenerateKeys: %v", err)
@@ -808,10 +832,20 @@ func TestCombineShares(t *testing.T) {
 func TestParseGroup(t *testing.T) {
 	for _, tc := range []struct {
 		group string
+		want  group.Group
 		err   error
 	}{
 		{
-			group: nist.NewBlakeSHA256P256().String(),
+			group: nist.NewP256().String(),
+			want:  nist.NewP256(),
+		},
+		{
+			group: nist.NewP384().String(),
+			want:  nist.NewP384(),
+		},
+		{
+			group: nist.NewP521().String(),
+			want:  nist.NewP521(),
 		},
 		{
 			group: "wrong",
@@ -819,8 +853,14 @@ func TestParseGroup(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("group=%v", tc.group), func(t *testing.T) {
-			if _, err := parseGroup(tc.group); !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
+			got, err := parseGroup(tc.group)
+			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
 				t.Errorf("got err=%v, want=%v", err, tc.err)
+			} else if err != nil {
+				return
+			}
+			if reflect.TypeOf(got) != reflect.TypeOf(tc.want) {
+				t.Errorf("got %T, want %T", got, tc.want)
 			}
 		})
 	}
@@ -913,13 +953,13 @@ func TestPublicKeyMarshal(t *testing.T) {
 				group:  g,
 				g_bar:  g.Point().Pick(r),
 				h:      g.Point().Pick(r),
-				hArray: []kyber.Point{g.Point().Pick(r)},
+				hArray: []group.Point{g.Point().Pick(r)},
 			},
 			{
 				group:  g,
 				g_bar:  g.Point().Pick(r),
 				h:      g.Point().Pick(r),
-				hArray: []kyber.Point{g.Point().Pick(r), g.Point().Pick(r), g.Point().Pick(r)},
+				hArray: []group.Point{g.Point().Pick(r), g.Point().Pick(r), g.Point().Pick(r)},
 			},
 		} {
 			t.Run(fmt.Sprintf("i=%d group=%v", i, typ), func(t *testing.T) {
@@ -1531,7 +1571,7 @@ func TestRedeal(t *testing.T) {
 				k:    2,
 				n:    5,
 				ms: &MasterSecret{
-					group: nist.NewBlakeSHA256QR512(),
+					group: newUnsupported(),
 					s:     ms.s,
 				},
 				err: cmpopts.AnyError,
@@ -1746,7 +1786,7 @@ func FuzzPrivateShareMarshal(f *testing.F) {
 		f.Add(mustMarshal(f, PrivateShare{
 			group: g,
 			index: 123,
-			v:     g.Scalar().Pick(keccak.New(nil)),
+			v:     g.Scalar().Pick(randStream(f)),
 		}))
 	}
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -1775,7 +1815,7 @@ func FuzzPrivateShareMarshal(f *testing.F) {
 }
 
 func FuzzPublicKeyMarshal(f *testing.F) {
-	r := keccak.New(nil)
+	r := randStream(f)
 	for _, groupStr := range supportedGroups {
 		g, err := parseGroup(groupStr)
 		if err != nil {
@@ -1790,13 +1830,13 @@ func FuzzPublicKeyMarshal(f *testing.F) {
 			group:  g,
 			g_bar:  g.Point().Pick(r),
 			h:      g.Point().Pick(r),
-			hArray: []kyber.Point{g.Point().Pick(r)},
+			hArray: []group.Point{g.Point().Pick(r)},
 		}))
 		f.Add(mustMarshal(f, PublicKey{
 			group:  g,
 			g_bar:  g.Point().Pick(r),
 			h:      g.Point().Pick(r),
-			hArray: []kyber.Point{g.Point().Pick(r), g.Point().Pick(r)},
+			hArray: []group.Point{g.Point().Pick(r), g.Point().Pick(r)},
 		}))
 	}
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -1825,7 +1865,7 @@ func FuzzPublicKeyMarshal(f *testing.F) {
 }
 
 func FuzzCiphertextMarshal(f *testing.F) {
-	r := keccak.New(nil)
+	r := randStream(f)
 	for _, groupStr := range supportedGroups {
 		g, err := parseGroup(groupStr)
 		if err != nil {
@@ -1867,7 +1907,7 @@ func FuzzCiphertextMarshal(f *testing.F) {
 }
 
 func FuzzDecryptionShareMarshal(f *testing.F) {
-	r := keccak.New(nil)
+	r := randStream(f)
 	for _, groupStr := range supportedGroups {
 		g, err := parseGroup(groupStr)
 		if err != nil {
