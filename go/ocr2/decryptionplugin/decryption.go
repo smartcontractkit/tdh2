@@ -39,7 +39,7 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 		f.Logger.Error("unable to decode reporting plugin config", commontypes.LogFields{
 			"configDigest": rpConfig.ConfigDigest.String(),
 		})
-		return nil, types.ReportingPluginInfo{}, fmt.Errorf("unalbe to decode reporting plugin config: %w", err)
+		return nil, types.ReportingPluginInfo{}, fmt.Errorf("unable to decode reporting plugin config: %w", err)
 	}
 
 	info := types.ReportingPluginInfo{
