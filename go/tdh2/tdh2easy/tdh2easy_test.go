@@ -88,7 +88,7 @@ func TestDecryptMarshalledEncryptedSecrets(t *testing.T) {
 			t.Fatalf("Unmarshal: %v", err)
 		}
 
-		decryptedShare, err := Decrypt(ciphertext, privateKeyShares[0])
+		decryptedShare, err := Decrypt(ciphertext, privateKeyShares[i])
 		if err != nil {
 			t.Fatalf("Decrypt: %v", err)
 		}
