@@ -461,6 +461,7 @@ func (c *Ciphertext) CombineShares(group kyber.Group, shares []*DecryptionShare,
 			V: s.u_i,
 		})
 	}
+	fmt.Println("pubShares count", len(pubShares))
 
 	arg, err := share.RecoverCommit(group, pubShares, k, n)
 	if err != nil {

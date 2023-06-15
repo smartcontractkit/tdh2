@@ -47,6 +47,6 @@ func symDecrypt(nonce, ctxt, key []byte) ([]byte, error) {
 	if len(nonce) != gcm.NonceSize() {
 		return nil, fmt.Errorf("nonce must have %dB", gcm.NonceSize())
 	}
-
+	fmt.Println("THRESHOLD DECRYPTION PLUGIN this is the input into gcm.Open (nonce, ctxt)", nonce, ctxt)
 	return gcm.Open(nil, nonce, ctxt, nil)
 }

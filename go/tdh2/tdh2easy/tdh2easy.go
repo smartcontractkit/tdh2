@@ -126,6 +126,7 @@ func Aggregate(c *Ciphertext, shares []*DecryptionShare, n int) ([]byte, error) 
 	if aes256KeySize != len(key) {
 		return nil, fmt.Errorf("incorrect key size")
 	}
+	fmt.Println("THRESHOLD DECRYPTION PLUGIN this is the input into the symDecrypt function (c.nonce, c.symCtxt, key)", c.nonce, c.symCtxt, key)
 	return symDecrypt(c.nonce, c.symCtxt, key)
 }
 

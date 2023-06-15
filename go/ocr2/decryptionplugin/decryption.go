@@ -273,6 +273,16 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 			continue
 		}
 
+		fmt.Println("THRESHOLD DECRYPTION PLUGIN this is the input into the tdh2easy.Aggregate function", "CIPHERTEXT: ", ciphertext, "DP.GENERICCONFIG.N: ", dp.genericConfig.N)
+		// Print all the values in decrShares
+		for i, value := range decrShares {
+			decShareMarshalled, err := value.Marshal()
+			if err != nil {
+				fmt.Println("ERROR WHILE MARSHALLING THRESHOLD DECRYPTION PLUGIN this is the input into the tdh2easy.Aggregate function DECRSHARES: %s", err)
+			}
+			fmt.Printf("THRESHOLD DECRYPTION PLUGIN DECRSHARE %d for req %s: %s\n", i, id, string(decShareMarshalled))
+		}
+
 		// OCR2.0 guaranties 2f+1 observations are from distinct oracles
 		// which guaranties f+1 valid observations and, hence, f+1 valid decryption shares.
 		// Therefore, here it is guaranteed that len(decrShares) > f.
@@ -320,6 +330,8 @@ func (dp *decryptionPlugin) getValidDecryptionShare(observer commontypes.OracleI
 	if err := decryptionShare.Unmarshal(decryptionShareBytes); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal decryption share: %w", err)
 	}
+	fmt.Println("THRESHOLD DECRYPTION PLUGIN KEY SHARE string", string(decryptionShareBytes))
+	fmt.Printf("THRESHOLD DECRYPTION PLUGIN KEY SHARE %+v", *decryptionShare)
 
 	expectedKeyShareIndex, ok := dp.oracleToKeyShare[observer]
 	if !ok {
