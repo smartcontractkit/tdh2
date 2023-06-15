@@ -15,6 +15,7 @@ import (
 
 type DecryptionReportingPluginFactory struct {
 	DecryptionQueue  DecryptionQueuingService
+	ConfigParser     config.ConfigParser
 	PublicKey        *tdh2easy.PublicKey
 	PrivKeyShare     *tdh2easy.PrivateShare
 	OracleToKeyShare map[commontypes.OracleID]int
@@ -33,7 +34,7 @@ type decryptionPlugin struct {
 
 // NewReportingPlugin complies with ReportingPluginFactory.
 func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.ReportingPluginConfig) (types.ReportingPlugin, types.ReportingPluginInfo, error) {
-	pluginConfig, err := config.DecodeReportingPluginConfig(rpConfig.OffchainConfig)
+	pluginConfig, err := f.ConfigParser.ParseConfig(rpConfig.OffchainConfig)
 	if err != nil {
 		f.Logger.Error("unable to decode reporting plugin config", commontypes.LogFields{
 			"configDigest": rpConfig.ConfigDigest.String(),

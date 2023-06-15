@@ -1,0 +1,31 @@
+name: Go package
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Build and test plugin
+        working-directory: ./go/ocr2/decryptionplugin
+        run: |
+          go build -v ./...
+          go test -v ./...
+
+      - name: Download npm deps
+        working-directory: ./js/tdh2
+        run: npm install
+
+      - name: Build and test TDH2
+        working-directory: ./go/tdh2
+        run: |
+          go build -v ./...
+          go test -v ./...

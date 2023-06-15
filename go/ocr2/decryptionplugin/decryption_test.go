@@ -3,6 +3,7 @@ package decryptionplugin
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -12,8 +13,12 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/smartcontractkit/libocr/commontypes"
 	"github.com/smartcontractkit/libocr/offchainreporting2/types"
+	"github.com/smartcontractkit/libocr/ragep2p/loggers"
 	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin/config"
+	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin/config/mocks"
 	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -33,7 +38,7 @@ type queue struct {
 	res [][]byte
 }
 
-func (q *queue) GetRequests(requestCountLimit, totalBytesLimit int) []DecryptionRequest {
+func (q *queue) GetRequests(requestCountLimit int, totalBytesLimit int) []DecryptionRequest {
 	stop := 0
 	for i, tot := 0, 0; i < len(q.q) && i < requestCountLimit; i++ {
 		tot += len(q.q[i].Ciphertext)
@@ -47,7 +52,7 @@ func (q *queue) GetRequests(requestCountLimit, totalBytesLimit int) []Decryption
 	return out
 }
 
-func (q *queue) GetCiphertext(ciphertextId []byte) ([]byte, error) {
+func (q *queue) GetCiphertext(ciphertextId CiphertextId) ([]byte, error) {
 	if bytes.Equal([]byte("please fail"), ciphertextId) {
 		return nil, fmt.Errorf("some error")
 	}
@@ -59,7 +64,7 @@ func (q *queue) GetCiphertext(ciphertextId []byte) ([]byte, error) {
 	return nil, ErrNotFound
 }
 
-func (q *queue) SetResult(ciphertextId, plaintext []byte) {
+func (q *queue) SetResult(ciphertextId CiphertextId, plaintext []byte) {
 	q.res = append(q.res, ciphertextId)
 	q.res = append(q.res, plaintext)
 }
@@ -111,6 +116,7 @@ func TestNewReportingPlugin(t *testing.T) {
 				Logger:       dummyLogger{},
 				PublicKey:    pk,
 				PrivKeyShare: sh[0],
+				ConfigParser: &config.DefaultConfigParser{},
 			}
 			plugin, info, err := factory.NewReportingPlugin(tc.conf)
 			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
@@ -747,4 +753,20 @@ func TestReport(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewReportingPlugin_CustomConfigParser(t *testing.T) {
+	customParser := mocks.NewConfigParser(t)
+	factory := DecryptionReportingPluginFactory{
+		ConfigParser: customParser,
+		Logger:       loggers.MakeLogrusLogger(),
+	}
+
+	customParser.On("ParseConfig", mock.Anything).Return(&config.ReportingPluginConfigWrapper{}, nil).Once()
+	_, _, err := factory.NewReportingPlugin(types.ReportingPluginConfig{})
+	require.NoError(t, err)
+
+	customParser.On("ParseConfig", mock.Anything).Return(nil, errors.New("error")).Once()
+	_, _, err = factory.NewReportingPlugin(types.ReportingPluginConfig{})
+	require.Error(t, err)
 }

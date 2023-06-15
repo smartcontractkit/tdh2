@@ -2,14 +2,14 @@
 package tdh2easy
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
 
+	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/nist"
 	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2"
-	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/kyber/v3/group/nist"
-	"go.dedis.ch/kyber/v3/xof/keccak"
 )
 
 // key size used in symmetric encryption (AES). 256 bits is a higher securitylevel than provided
@@ -17,7 +17,7 @@ import (
 const aes256KeySize = 32
 
 // defaultGroup is the default EC group used.
-var defaultGroup = nist.NewBlakeSHA256P256()
+var defaultGroup = nist.NewP256()
 
 // PrivateShare encodes TDH2 private share.
 type PrivateShare struct {
@@ -94,11 +94,11 @@ type Ciphertext struct {
 
 // Decrypt returns a decryption share for the ciphertext.
 func Decrypt(c *Ciphertext, x_i *PrivateShare) (*DecryptionShare, error) {
-	xof, err := xof()
+	r, err := randStream()
 	if err != nil {
 		return nil, err
 	}
-	d, err := c.tdh2Ctxt.Decrypt(defaultGroup, x_i.p, xof)
+	d, err := c.tdh2Ctxt.Decrypt(defaultGroup, x_i.p, r)
 	if err != nil {
 		return nil, err
 	}
@@ -129,13 +129,21 @@ func Aggregate(c *Ciphertext, shares []*DecryptionShare, n int) ([]byte, error) 
 	return symDecrypt(c.nonce, c.symCtxt, key)
 }
 
-// xof returns xof used for providing randomness.
-func xof() (kyber.XOF, error) {
-	seed := make([]byte, 64)
-	if _, err := rand.Read(seed); err != nil {
-		return nil, fmt.Errorf("cannot generate seed: %w", err)
+// randStream returns a stream cipher used for providing randomness.
+func randStream() (cipher.Stream, error) {
+	key := make([]byte, aes256KeySize)
+	if _, err := rand.Read(key); err != nil {
+		return nil, fmt.Errorf("cannot generate key: %w", err)
 	}
-	return keccak.New(seed), nil
+	iv := make([]byte, aes.BlockSize)
+	if _, err := rand.Read(iv); err != nil {
+		return nil, fmt.Errorf("cannot generate iv: %w", err)
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("cannot init aes: %w", err)
+	}
+	return cipher.NewCTR(block, iv), nil
 }
 
 type ciphertextRaw struct {
@@ -178,11 +186,11 @@ func (c *Ciphertext) UnmarshalVerify(data []byte, pk *PublicKey) error {
 // GenerateKeys generates and returns, the master secret, public key, and private shares. It takes the
 // total number of nodes n and a threshold k (the number of shares sufficient for decryption).
 func GenerateKeys(k, n int) (*MasterSecret, *PublicKey, []*PrivateShare, error) {
-	xof, err := xof()
+	r, err := randStream()
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ms, pk, sh, err := tdh2.GenerateKeys(defaultGroup, nil, k, n, xof)
+	ms, pk, sh, err := tdh2.GenerateKeys(defaultGroup, nil, k, n, r)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -200,11 +208,11 @@ func GenerateKeys(k, n int) (*MasterSecret, *PublicKey, []*PrivateShare, error) 
 // The old public key can still be used for encryption but it cannot be used for share
 // verification (the new key has to be used instead).
 func Redeal(pk *PublicKey, ms *MasterSecret, k, n int) (*PublicKey, []*PrivateShare, error) {
-	xof, err := xof()
+	r, err := randStream()
 	if err != nil {
 		return nil, nil, err
 	}
-	p, sh, err := tdh2.Redeal(pk.p, ms.m, k, n, xof)
+	p, sh, err := tdh2.Redeal(pk.p, ms.m, k, n, r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -234,12 +242,12 @@ func Encrypt(pk *PublicKey, msg []byte) (*Ciphertext, error) {
 		return nil, fmt.Errorf("cannot encrypt message: %w", err)
 	}
 
-	xof, err := xof()
+	r, err := randStream()
 	if err != nil {
 		return nil, err
 	}
 	// encrypt the key with TDH2 using empty label
-	tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, make([]byte, tdh2.InputSize), xof)
+	tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, make([]byte, tdh2.InputSize), r)
 	if err != nil {
 		return nil, fmt.Errorf("cannot TDH2 encrypt: %w", err)
 	}
