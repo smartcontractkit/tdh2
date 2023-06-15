@@ -3,6 +3,7 @@ package tdh2easy
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -56,6 +57,50 @@ func TestPrivateShareMarshal(t *testing.T) {
 	if err := got.Unmarshal([]byte("broken")); err == nil {
 		t.Errorf("Unmarshal did not fail")
 	}
+}
+
+func TestDecryptMarshalledEncryptedSecrets(t *testing.T) {
+	publicKeyJson := "{\"Group\":\"P256\",\"G_bar\":\"BCykrCDK+rA8ufvfq9CveNSKqy+JSEEgcYo2SMYQPy1n3SrXvRoAI5aWM+WiupeGYVsKb3SsxGHzhumfVdHc72I=\",\"H\":\"BN0DVzW7aVyBI0e8ru9I4i4CGp6uCYBqCsK4maf+hKq7UwwDdCB9o1Vz82jzTocAZGgOaA5+JF2V4TeMcFfp2NQ=\",\"HArray\":[\"BD5TTCSUv4+Fazeu3lQ9s6EcuXY1/NspzZdAOG5r+d+wNwFOHqoCj4rRu2CszFrEhU4DzcHvGZZbnwbsXMcq4dY=\",\"BGy171xEFttZPYejSmOTqEUBnDfB5jdFeEXf0tyOsstQU8AW1sEAmll6Aa/ETbmIHYXAs4Vp2hyTH3SkTmNCAYw=\",\"BIyrCbUVfvp0AeiXFe92C3YRC7Bw4JDxOlhIk9K1lZdBMtYrtDQemtWG6g+zhcgCeY6A/Cf9pd2c4cUaqT9hMto=\",\"BISP5+iNKviwvwZpzZW5bMhhAcVX/TAoPZPabqZMEIvZygb51ttiRgflKtyqF2rBaHaY4OPeuBo+dvN6Yj39l/c=\"]}"
+	privateKeyJsonShares := []string{
+		"{\"Group\":\"P256\",\"Index\":3,\"V\":\"R2XF43/gQ7PE+zChjSqWdS9a5QQ9rzr7YzRdvY4rJUY=\"}",
+		"{\"Group\":\"P256\",\"Index\":2,\"V\":\"4O/JwWBKpFowSeqU6FLqmaX10RMOcMzJO+bCd4+d+eA=\"}",
+		"{\"Group\":\"P256\",\"Index\":1,\"V\":\"WBjhhAmfGD0C2Gpq73zLLcJbQtF+uzQoz4HAkRhES2Q=\"}",
+		"{\"Group\":\"P256\",\"Index\":0,\"V\":\"rOENKXvdn148prAjoqg4MP5ZL5rcva4kBXjtkCDkZHQ=\"}",
+	}
+
+	publicKey := &PublicKey{}
+	if err := publicKey.Unmarshal([]byte(publicKeyJson)); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+
+	ciphertextJson := "{\"TDH2Ctxt\":\"eyJHcm91cCI6IlAyNTYiLCJDIjoib25SL1FDSWhrMHVCVUFpcXdQVnN6bnpTbjVIaXpUM3hmaUtoVW5oR0l5Yz0iLCJMYWJlbCI6IkFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE9IiwiVSI6IkJFeDFjUlhVc0R2QUp6UjNYeVBiUXErWkVXMnVxRnljMW5oME04V3licCs4ZE5tRjVkSElPRDUzNkpNT25zN3o0MEtBOW1LbEpwZDNxZ2x6YjJDeTlBND0iLCJVX2JhciI6IkJGNXFzelNPODRTU1p1MXQvenJHT2lQb0thYmtBSGM2Z1RudUxTaDM4RXpCSXIxY1JJSVQ2WUp2VDNjdlNrUWMvR09pbS8wQnE2U1hqdHRLTnp0QWh6Zz0iLCJFIjoiWFI1ci8zUlJzY3o4ckhuUnM0Q053akpveWhaZXdybWRVdDd1RmRUSzNPZz0iLCJGIjoiaEFTZHBUWFdYWXNnMnRieE1Mbkw3UmdmdzZrQ2pZekRXM3RBcWpRdDdvcz0ifQ==\",\"SymCtxt\":\"Aee+otZrsXBdjXR7lezLBmDfRlP5bd7DiTOKItcJSb+ctkWGOo23SRxifE3CF/REaaIPluRGu2o5cGzJJNPpx/CKwAGpMrKgdcfiyV1AgqCdukxcRMtoHg2FQkQmINVyathhycbh/wZ+D/qabtxra3PjoPmFZqFG0kxBNK0a8FUgqL0EKFmQ4383hxSXAGE1bjf1jFhFz/L4eiiescoQ9J93QW/5B62zeUqmibdlcisCCzvQ85YQ39jzCqZSTZVEvxk5MYhgyyo8nWyoy0W20zntN0B71RZ44fy93twwFdLphxTNIb2sX7zcPFSsT7wcU9xG8z/MN1mQn2mBprRW2QupATfgnJFEb6RIv/EJMtDBFcl4HqFQt6oBbJsaiZJqmx4yV6SaXMvbnzjpCcHJr4DjdaNAHpytRX++Oiz1ugeqA4lZE/Tm33+qnCM7pIfhAEnPS4aPDSBx5HQpMWvzZLGZcBzjE5WKralzUlTTZdjklFBQrQrTD1lQVbekpqsWiQOVXKII\",\"Nonce\":\"a6Nciq6yk7g5aM8m\"}"
+
+	ciphertext := &Ciphertext{}
+	if err := ciphertext.UnmarshalVerify([]byte(ciphertextJson), publicKey); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+
+	privateKeyShares := make([]*PrivateShare, len(privateKeyJsonShares))
+	decryptedShares := make([]*DecryptionShare, len(privateKeyJsonShares))
+	for i, privateKeyJsonShare := range privateKeyJsonShares {
+		privateKeyShares[i] = &PrivateShare{}
+		if err := privateKeyShares[i].Unmarshal([]byte(privateKeyJsonShare)); err != nil {
+			t.Fatalf("Unmarshal: %v", err)
+		}
+
+		decryptedShare, err := Decrypt(ciphertext, privateKeyShares[0])
+		if err != nil {
+			t.Fatalf("Decrypt: %v", err)
+		}
+		decryptedShares[i] = decryptedShare
+	}
+
+	decrypted, err := Aggregate(ciphertext, decryptedShares[:2], 4)
+	if err != nil {
+		t.Fatalf("Aggregate: %v", err)
+	}
+
+	fmt.Println("Decrypted JSON: ", string(decrypted))
 }
 
 func TestDecryptionShareMarshal(t *testing.T) {
