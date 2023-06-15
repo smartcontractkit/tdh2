@@ -15,11 +15,15 @@ import (
 
 type DecryptionReportingPluginFactory struct {
 	DecryptionQueue  DecryptionQueuingService
-	ConfigParser     config.ConfigParser
+	ConfigParser     ConfigParser
 	PublicKey        *tdh2easy.PublicKey
 	PrivKeyShare     *tdh2easy.PrivateShare
 	OracleToKeyShare map[commontypes.OracleID]int
 	Logger           commontypes.Logger
+}
+
+type ConfigParser interface {
+	ParseConfig(offchainConfig []byte) (*config.ReportingPluginConfigWrapper, error)
 }
 
 type decryptionPlugin struct {
@@ -39,7 +43,7 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 		f.Logger.Error("unable to decode reporting plugin config", commontypes.LogFields{
 			"configDigest": rpConfig.ConfigDigest.String(),
 		})
-		return nil, types.ReportingPluginInfo{}, fmt.Errorf("unable to decode reporting plugin config: %w", err)
+		return nil, types.ReportingPluginInfo{}, fmt.Errorf("unalbe to decode reporting plugin config: %w", err)
 	}
 
 	info := types.ReportingPluginInfo{
