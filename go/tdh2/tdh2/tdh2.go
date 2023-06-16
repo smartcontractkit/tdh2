@@ -92,7 +92,8 @@ func (s *PrivateShare) Unmarshal(data []byte) error {
 	}
 
 	s.index = raw.Index
-	if s.v, err = unmarshalScalar(s.group, raw.V); err != nil {
+	s.v = s.group.Scalar()
+	if err = s.v.UnmarshalBinary(raw.V); err != nil {
 		return fmt.Errorf("cannot unmarshal: %w", err)
 	}
 	return nil
@@ -213,18 +214,20 @@ func (p *PublicKey) Unmarshal(data []byte) error {
 		return fmt.Errorf("cannot parse group: %w", err)
 	}
 
-	if p.g_bar, err = unmarshalPoint(p.group, raw.G_bar); err != nil {
+	p.g_bar = p.group.Point()
+	if err = p.g_bar.UnmarshalBinary(raw.G_bar); err != nil {
 		return fmt.Errorf("unmarshaling G_bar: %w", err)
 	}
 
-	if p.h, err = unmarshalPoint(p.group, raw.H); err != nil {
+	p.h = p.group.Point()
+	if err = p.h.UnmarshalBinary(raw.H); err != nil {
 		return fmt.Errorf("unmarshaling H: %w", err)
 	}
 
 	p.hArray = []group.Point{}
 	for _, h := range raw.HArray {
-		new, err := unmarshalPoint(p.group, h)
-		if err != nil {
+		new := p.group.Point()
+		if err = new.UnmarshalBinary(h); err != nil {
 			return fmt.Errorf("cannot unmarshal point: %w", err)
 		}
 		p.hArray = append(p.hArray, new)
@@ -530,16 +533,20 @@ func (c *Ciphertext) Unmarshal(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("cannot parse group: %w", err)
 	}
-	if c.e, err = unmarshalScalar(c.group, raw.E); err != nil {
+	c.e = c.group.Scalar()
+	if err = c.e.UnmarshalBinary(raw.E); err != nil {
 		return fmt.Errorf("cannot unmarshal E: %w", err)
 	}
-	if c.u, err = unmarshalPoint(c.group, raw.U); err != nil {
+	c.u = c.group.Point()
+	if err = c.u.UnmarshalBinary(raw.U); err != nil {
 		return fmt.Errorf("cannot unmarshal U: %w", err)
 	}
-	if c.u_bar, err = unmarshalPoint(c.group, raw.U_bar); err != nil {
+	c.u_bar = c.group.Point()
+	if err = c.u_bar.UnmarshalBinary(raw.U_bar); err != nil {
 		return fmt.Errorf("cannot unmarshal U_bar: %w", err)
 	}
-	if c.f, err = unmarshalScalar(c.group, raw.F); err != nil {
+	c.f = c.group.Scalar()
+	if err = c.f.UnmarshalBinary(raw.F); err != nil {
 		return fmt.Errorf("cannot unmarshal F: %w", err)
 	}
 	return nil
@@ -612,13 +619,16 @@ func (d *DecryptionShare) Unmarshal(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("cannot parse group: %w", err)
 	}
-	if d.e_i, err = unmarshalScalar(d.group, raw.E_i); err != nil {
+	d.e_i = d.group.Scalar()
+	if err = d.e_i.UnmarshalBinary(raw.E_i); err != nil {
 		return fmt.Errorf("cannot unmarshal E_i: %w", err)
 	}
-	if d.u_i, err = unmarshalPoint(d.group, raw.U_i); err != nil {
+	d.u_i = d.group.Point()
+	if err = d.u_i.UnmarshalBinary(raw.U_i); err != nil {
 		return fmt.Errorf("cannot unmarshal U_i: %w", err)
 	}
-	if d.f_i, err = unmarshalScalar(d.group, raw.F_i); err != nil {
+	d.f_i = d.group.Scalar()
+	if err = d.f_i.UnmarshalBinary(raw.F_i); err != nil {
 		return fmt.Errorf("cannot unmarshal F_i: %w", err)
 	}
 	return nil
@@ -693,28 +703,4 @@ func xor(a, b []byte) ([]byte, error) {
 		buf[i] = a[i] ^ b[i]
 	}
 	return buf, nil
-}
-
-// unmarshalPoint unmarshals point safely, i.e., avoiding panics present in the group.lib.
-func unmarshalPoint(g group.Group, data []byte) (group.Point, error) {
-	if len(data) != g.PointLen() {
-		return nil, fmt.Errorf("incorrect length")
-	}
-	p := g.Point()
-	if err := p.UnmarshalBinary(data); err != nil {
-		return nil, err
-	}
-	return p, nil
-}
-
-// unmarshalScalar unmarshals scalar safely, i.e., avoiding panics present in the group.lib.
-func unmarshalScalar(g group.Group, data []byte) (group.Scalar, error) {
-	if len(data) != g.ScalarLen() {
-		return nil, fmt.Errorf("incorrect length")
-	}
-	s := g.Scalar()
-	if err := s.UnmarshalBinary(data); err != nil {
-		return nil, err
-	}
-	return s, nil
 }
