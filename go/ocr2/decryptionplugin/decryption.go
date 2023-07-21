@@ -271,9 +271,17 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 			continue
 		}
 
-		// OCR2.0 guaranties 2f+1 observations are from distinct oracles
+		// This is a sanity check.
+		// OCR2.0 guaranties 2f+1 observations are from distinct oracles.
 		// which guaranties f+1 valid observations and, hence, f+1 valid decryption shares.
-		// Therefore, here it is guaranteed that len(decrShares) > f.
+		// Therefore, here it should be guaranteed that len(decrShares) > f.
+		if len(decrShares) < dp.genericConfig.F+1 {
+			dp.logger.Error("DecryptionReporting Report: not enough valid decryption shares after processing all observations, skipping aggregation of decryption shares", commontypes.LogFields{
+				"ciphertextID": id,
+			})
+			continue
+		}
+
 		plaintext, err := tdh2easy.Aggregate(ciphertext, decrShares, dp.genericConfig.N)
 		if err != nil {
 			dp.decryptionQueue.SetResult([]byte(id), nil, fmt.Errorf("cannot aggregate decryption shares: %w", err))
