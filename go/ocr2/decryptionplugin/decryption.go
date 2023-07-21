@@ -82,6 +82,7 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 	for _, request := range decryptionRequests {
 		ciphertext := &tdh2easy.Ciphertext{}
 		if err := ciphertext.UnmarshalVerify(request.Ciphertext, dp.publicKey); err != nil {
+			dp.decryptionQueue.SetResult(request.CiphertextId, nil, fmt.Errorf("cannot unmarshal the ciphertext: %w", err))
 			dp.logger.Error("DecryptionReporting Query: cannot unmarshal the ciphertext, skipping it", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": request.CiphertextId,
@@ -156,7 +157,8 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 
 		decryptionShare, err := tdh2easy.Decrypt(ciphertext, dp.privKeyShare)
 		if err != nil {
-			dp.logger.Error("DecryptionReporting Observation: cannot decrypt the ciphertext", commontypes.LogFields{
+			dp.decryptionQueue.SetResult(request.CiphertextId, nil, fmt.Errorf("cannot decrypt the ciphertext with the private key share: %w", err))
+			dp.logger.Error("DecryptionReporting Observation: cannot decrypt the ciphertext with the private key share", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": request.CiphertextId,
 			})
@@ -274,6 +276,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		// Therefore, here it is guaranteed that len(decrShares) > f.
 		plaintext, err := tdh2easy.Aggregate(ciphertext, decrShares, dp.genericConfig.N)
 		if err != nil {
+			dp.decryptionQueue.SetResult([]byte(id), nil, fmt.Errorf("cannot aggregate decryption shares: %w", err))
 			dp.logger.Error("DecryptionReporting Report: cannot aggregate decryption shares", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": id,
@@ -346,7 +349,7 @@ func (dp *decryptionPlugin) ShouldAcceptFinalizedReport(ctx context.Context, ts 
 	}
 
 	for _, item := range reportProto.ProcessedDecryptedRequests {
-		dp.decryptionQueue.SetResult(item.CiphertextId, item.Plaintext)
+		dp.decryptionQueue.SetResult(item.CiphertextId, item.Plaintext, nil)
 	}
 
 	dp.logger.Debug("DecryptionReporting ShouldAcceptFinalizedReport: end", commontypes.LogFields{

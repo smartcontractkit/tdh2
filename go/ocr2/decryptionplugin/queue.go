@@ -22,5 +22,5 @@ type DecryptionQueuingService interface {
 	GetCiphertext(ciphertextId CiphertextId) ([]byte, error)
 
 	// SetResult sets the plaintext (decrypted ciphertext) which corresponds to ciphertextId.
-	SetResult(ciphertextId CiphertextId, plaintext []byte)
+	SetResult(ciphertextId CiphertextId, plaintext []byte, err error)
 }

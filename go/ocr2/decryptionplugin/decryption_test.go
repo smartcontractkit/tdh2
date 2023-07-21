@@ -64,7 +64,7 @@ func (q *queue) GetCiphertext(ciphertextId CiphertextId) ([]byte, error) {
 	return nil, ErrNotFound
 }
 
-func (q *queue) SetResult(ciphertextId CiphertextId, plaintext []byte) {
+func (q *queue) SetResult(ciphertextId CiphertextId, plaintext []byte, err error) {
 	q.res = append(q.res, ciphertextId)
 	q.res = append(q.res, plaintext)
 }
