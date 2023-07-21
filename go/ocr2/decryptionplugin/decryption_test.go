@@ -717,8 +717,9 @@ func TestReport(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dp := &decryptionPlugin{
-				logger:    dummyLogger{},
-				publicKey: pk,
+				logger:          dummyLogger{},
+				decryptionQueue: &queue{},
+				publicKey:       pk,
 				genericConfig: &types.ReportingPluginConfig{
 					F: 2,
 				},
