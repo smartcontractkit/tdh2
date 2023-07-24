@@ -21,6 +21,7 @@ type DecryptionQueuingService interface {
 	// If the ciphertext does not exist it returns ErrNotFound.
 	GetCiphertext(ciphertextId CiphertextId) ([]byte, error)
 
-	// SetResult sets the plaintext (decrypted ciphertext) which corresponds to ciphertextId.
+	// SetResult sets the plaintext (decrypted ciphertext) which corresponds to ciphertextId
+	// or returns an error if the decrypted ciphertext is invalid.
 	SetResult(ciphertextId CiphertextId, plaintext []byte, err error)
 }

@@ -272,10 +272,10 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		}
 
 		// This is a sanity check.
-		// OCR2.0 guaranties 2f+1 observations are from distinct oracles.
-		// which guaranties f+1 valid observations and, hence, f+1 valid decryption shares.
+		// OCR2.0 guarantees 2f+1 observations are from distinct oracles.
+		// which guarantees f+1 valid observations and, hence, f+1 valid decryption shares.
 		// Therefore, here it should be guaranteed that len(decrShares) > f.
-		if len(decrShares) < dp.genericConfig.F+1 {
+		if len(decrShares) < fPlusOne {
 			dp.logger.Error("DecryptionReporting Report: not enough valid decryption shares after processing all observations, skipping aggregation of decryption shares", commontypes.LogFields{
 				"ciphertextID": id,
 			})
