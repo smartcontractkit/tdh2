@@ -1,8 +1,15 @@
 package decryptionplugin
 
-import "errors"
+import (
+	"fmt"
+)
 
-var ErrNotFound = errors.New("not found")
+var (
+	ErrNotFound      = fmt.Errorf("not found")
+	ErrUnmarshalling = fmt.Errorf("cannot unmarshal the ciphertext in the query plugin funciton")
+	ErrDecryption    = fmt.Errorf("cannot decrypt the ciphertext with the private key share in observation plugin function")
+	ErrAggregation   = fmt.Errorf("cannot aggregate valid decryption shares in report plugn function")
+)
 
 type CiphertextId = []byte
 

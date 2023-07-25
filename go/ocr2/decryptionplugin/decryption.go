@@ -82,7 +82,7 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 	for _, request := range decryptionRequests {
 		ciphertext := &tdh2easy.Ciphertext{}
 		if err := ciphertext.UnmarshalVerify(request.Ciphertext, dp.publicKey); err != nil {
-			dp.decryptionQueue.SetResult(request.CiphertextId, nil, fmt.Errorf("cannot unmarshal the ciphertext: %w", err))
+			dp.decryptionQueue.SetResult(request.CiphertextId, nil, ErrUnmarshalling)
 			dp.logger.Error("DecryptionReporting Query: cannot unmarshal the ciphertext, skipping it", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": request.CiphertextId,
@@ -157,7 +157,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 
 		decryptionShare, err := tdh2easy.Decrypt(ciphertext, dp.privKeyShare)
 		if err != nil {
-			dp.decryptionQueue.SetResult(request.CiphertextId, nil, fmt.Errorf("cannot decrypt the ciphertext with the private key share: %w", err))
+			dp.decryptionQueue.SetResult(request.CiphertextId, nil, ErrDecryption)
 			dp.logger.Error("DecryptionReporting Observation: cannot decrypt the ciphertext with the private key share", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": request.CiphertextId,
@@ -284,7 +284,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 
 		plaintext, err := tdh2easy.Aggregate(ciphertext, decrShares, dp.genericConfig.N)
 		if err != nil {
-			dp.decryptionQueue.SetResult([]byte(id), nil, fmt.Errorf("cannot aggregate decryption shares: %w", err))
+			dp.decryptionQueue.SetResult([]byte(id), nil, ErrAggregation)
 			dp.logger.Error("DecryptionReporting Report: cannot aggregate decryption shares", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": id,
