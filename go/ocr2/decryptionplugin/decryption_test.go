@@ -64,7 +64,7 @@ func (q *queue) GetCiphertext(ciphertextId CiphertextId) ([]byte, error) {
 	return nil, ErrNotFound
 }
 
-func (q *queue) SetResult(ciphertextId CiphertextId, plaintext []byte) {
+func (q *queue) SetResult(ciphertextId CiphertextId, plaintext []byte, err error) {
 	q.res = append(q.res, ciphertextId)
 	q.res = append(q.res, plaintext)
 }
@@ -717,8 +717,9 @@ func TestReport(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dp := &decryptionPlugin{
-				logger:    dummyLogger{},
-				publicKey: pk,
+				logger:          dummyLogger{},
+				decryptionQueue: &queue{},
+				publicKey:       pk,
 				genericConfig: &types.ReportingPluginConfig{
 					F: 2,
 				},
