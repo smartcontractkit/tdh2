@@ -3,22 +3,56 @@ name: Go package
 on: [push]
 
 jobs:
-  build:
-
+  golangci-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+      
+      - name: Install golangci-lint
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.53.3
+      
+      # go.work makes it necessary to find go.mod files to run linter in the corresponding dirs
+      - name: Run golangci-lint
+        run: > 
+          find . -name "go.mod" -execdir $(go env GOPATH)/bin/golangci-lint run 
+          --timeout=2m0s 
+          --out-format=checkstyle:golangci-lint-report.xml 
+          --skip-dirs="internal/group/" \;
+      
+      - name: Check golangci-lint report for errors
+        run: find . -name "golangci-lint-report.xml" -exec grep "error" {} + && exit 1 || true
+
+      - name: Upload golangci-lint report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: golangci-lint-report
+          path: |
+            ./go/ocr2/decryptionplugin/golangci-lint-report.xml
+            ./go/tdh2/golangci-lint-report.xml
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.20'
 
-      - name: Build and test plugin
+      - name: Build and test OCR2 plugin
         working-directory: ./go/ocr2/decryptionplugin
         run: |
           go build -v ./...
-          go test -v ./...
+          go test -v ./... -coverpkg=./... -coverprofile=ocr2_decryptionplugin_coverage.txt
 
       - name: Download npm deps
         working-directory: ./js/tdh2
@@ -28,4 +62,53 @@ jobs:
         working-directory: ./go/tdh2
         run: |
           go build -v ./...
-          go test -v ./...
+          go test -v ./... -coverpkg=./... -coverprofile=tdh_coverage.txt
+
+      - name: Upload Go test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-test-results
+          path: |
+            ./go/ocr2/ocr2_decryptionplugin_coverage.txt
+            ./go/tdh2/tdh_coverage.txt
+
+  sonar-scan:
+    name: SonarQube
+    needs: [golangci-lint, build-and-test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # fetch all history for all tags and branches to provide more metadata for sonar reports
+
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Update golangci-lint report symlinks 
+        # When golangci-lint is run in a multimodule project, it creates a report with relative paths to the files which should be updated
+        # The command returns true to avoid failing the workflow if the report is not found
+        continue-on-error: true
+        run: |
+          sed -i 's@file\ name="@file\ name="/github/workspace/go/ocr2/decryptionplugin/@' ./golangci-lint-report/ocr2/decryptionplugin/golangci-lint-report.xml && echo "OCR2 golangci-lint report symlinks updated"
+          sed -i 's@file\ name="@file\ name="/github/workspace/go/tdh2/@' ./golangci-lint-report/tdh2/golangci-lint-report.xml && echo "TDH2 golangci-lint report symlinks updated"
+      
+      - name: Set SonarQube Report Paths
+        id: sonarqube_report_paths
+        shell: bash
+        run: |
+          echo "sonarqube_coverage_report_paths=$(find -type f -name '*coverage.txt' -printf "%p,")" >> $GITHUB_OUTPUT
+          echo "sonarqube_golangci_report_paths=$(find -type f -name 'golangci-lint-report.xml' -printf "%p,")" >> $GITHUB_OUTPUT
+      
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v1.2.0
+        with:
+          args: >
+            -Dsonar.go.coverage.reportPaths=${{ steps.sonarqube_report_paths.outputs.sonarqube_coverage_report_paths }}
+            -Dsonar.go.golangci-lint.reportPaths=${{ steps.sonarqube_report_paths.outputs.sonarqube_golangci_report_paths }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      
