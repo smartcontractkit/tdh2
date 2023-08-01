@@ -1442,27 +1442,37 @@ func BenchmarkAll(b *testing.B) {
 			// run actual benchmarks
 			b.Run(fmt.Sprintf("%v %d out of %d Generate", typ, tc.k, tc.n), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					GenerateKeys(group, nil, tc.k, tc.n, rand)
+					if _, _, _, err := GenerateKeys(group, nil, tc.k, tc.n, rand); err != nil {
+						b.Fatalf("GenerateKeys: %v", err)
+					}
 				}
 			})
 			b.Run(fmt.Sprintf("%v %d out of %d Encrypt", typ, tc.k, tc.n), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					Encrypt(pk, msg, label, rand)
+					if _, err := Encrypt(pk, msg, label, rand); err != nil {
+						b.Fatalf("Encrypt: %v", err)
+					}
 				}
 			})
 			b.Run(fmt.Sprintf("%v %d out of %d Decrypt", typ, tc.k, tc.n), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					ctxt.Decrypt(group, shares[i%len(shares)], rand)
+					if _, err := ctxt.Decrypt(group, shares[i%len(shares)], rand); err != nil {
+						b.Fatalf("Decrypt: %v", err)
+					}
 				}
 			})
 			b.Run(fmt.Sprintf("%v %d out of %d VerifyShare", typ, tc.k, tc.n), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					VerifyShare(pk, ctxt, decShares[i%len(decShares)])
+					if err := VerifyShare(pk, ctxt, decShares[i%len(decShares)]); err != nil {
+						b.Fatalf("VerifyShare: %v", err)
+					}
 				}
 			})
 			b.Run(fmt.Sprintf("%v %d out of %d CombineShares", typ, tc.k, tc.n), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					ctxt.CombineShares(group, decShares[:tc.k], tc.k, tc.n)
+					if _, err := ctxt.CombineShares(group, decShares[:tc.k], tc.k, tc.n); err != nil {
+						b.Fatalf("CombineShares: %v", err)
+					}
 				}
 			})
 		}
