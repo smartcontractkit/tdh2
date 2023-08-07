@@ -740,6 +740,9 @@ func TestReport(t *testing.T) {
 			if processed != tc.wantProcessed {
 				t.Errorf("got processed=%v, want=%v", processed, tc.wantProcessed)
 			}
+			// make sure Report() output is deterministic
+			_, secondReportBytes, _ := dp.Report(context.Background(), types.ReportTimestamp{}, tc.query, tc.obs)
+			require.Equal(t, reportBytes, secondReportBytes)
 			var report Report
 			if err := proto.Unmarshal(reportBytes, &report); err != nil {
 				t.Errorf("Unmarshal: %v", err)
