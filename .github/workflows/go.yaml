@@ -70,8 +70,9 @@ jobs:
         with:
           name: go-test-results
           path: |
-            ./go/ocr2/ocr2_decryptionplugin_coverage.txt
+            ./go/ocr2/decryptionplugin/ocr2_decryptionplugin_coverage.txt
             ./go/tdh2/tdh_coverage.txt
+
 
   sonar-scan:
     name: SonarQube
