@@ -262,7 +262,13 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 	}
 
 	reportProto := Report{}
-	for id, decrShares := range validDecryptionShares {
+	for _, request := range queryProto.DecryptionRequests {
+		id := string(request.CiphertextId)
+		decrShares, ok := validDecryptionShares[id]
+		if !ok {
+			// Request not included in any observations in the current round.
+			continue
+		}
 		ciphertext, ok := ciphertexts[id]
 		if !ok {
 			dp.logger.Error("DecryptionReporting Report: there is not ciphertext in the query with matching id, skipping aggregation of decryption shares", commontypes.LogFields{
