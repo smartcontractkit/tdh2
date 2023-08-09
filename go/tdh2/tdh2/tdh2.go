@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/cipher"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -634,9 +635,9 @@ func (d *DecryptionShare) Unmarshal(data []byte) error {
 	return nil
 }
 
-// hash is a generic hash function
+// hash is a hash function used internally in hash2 and hash4 to compute a scalar.
 func hash(msg []byte) []byte {
-	h := defaultHash()
+	h := sha512.New()
 	h.Write(msg)
 	return h.Sum(nil)
 }
@@ -647,7 +648,9 @@ func hash1(group string, g group.Point) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot concatenate points: %w", err)
 	}
-	return hash(append([]byte("tdh2hash1"), point...)), nil
+	h := defaultHash()
+	h.Write(append([]byte("tdh2hash1"), point...))
+	return h.Sum(nil), nil
 }
 
 // hash2 is an implementation of the H_2 hash function (see p15 of the paper).
