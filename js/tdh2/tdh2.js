@@ -104,10 +104,13 @@ function xor(a, b) {
 
 function encrypt(pub, msg) {
   const ciph = new Cipher('AES-256-GCM');
+  const blockSize = 16;
   const key =  rnd.randomBytes(tdh2InputSize);
   const nonce = rnd.randomBytes(12);
 
   ciph.init(key, nonce);
+  if (msg.length > ((2**32)-2)*blockSize)
+    throw new Error('message too long');
   const ctxt = Buffer.concat([
     ciph.update(msg),
     ciph.final(),
