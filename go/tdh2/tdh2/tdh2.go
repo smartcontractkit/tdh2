@@ -445,7 +445,8 @@ func (ctxt *Ciphertext) Decrypt(group group.Group, x_i *PrivateShare, rand ciphe
 }
 
 // CombineShares combines a set of decryption shares and returns the decrypted message.
-// The caller has to ensure that the ciphertext is validated.
+// The caller has to ensure that the ciphertext is validated, the decryption shares are valid,
+// all the shares are distinct and the number of them is at least k.
 func (c *Ciphertext) CombineShares(group group.Group, shares []*DecryptionShare, k, n int) ([]byte, error) {
 	if group.String() != c.group.String() {
 		return nil, fmt.Errorf("incorrect ciphertext group: %q", c.group)

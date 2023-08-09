@@ -145,7 +145,9 @@ func VerifyShare(c *Ciphertext, pk *PublicKey, share *DecryptionShare) error {
 // Aggregate decrypts the TDH2-encrypted key and using it recovers the
 // symmetrically encrypted plaintext. It takes decryption shares and
 // the total number of participants as the arguments.
-// Ciphertext and shares MUST be verified before calling Aggregate.
+// Ciphertext and shares MUST be verified before calling Aggregate,
+// all the shares have to be distinct and their number has to be
+// at least k (the scheme's threshold).
 func Aggregate(c *Ciphertext, shares []*DecryptionShare, n int) ([]byte, error) {
 	sh := []*tdh2.DecryptionShare{}
 	for _, s := range shares {
