@@ -562,6 +562,17 @@ func TestCheckEi(t *testing.T) {
 				err: cmpopts.AnyError,
 			},
 			{
+				name: "negative share index",
+				ctxt: ctxt,
+				share: &DecryptionShare{
+					index: -1,
+					u_i:   ds.u_i,
+					e_i:   ds.e_i,
+					f_i:   ds.f_i,
+				},
+				err: cmpopts.AnyError,
+			},
+			{
 				name: "broken U",
 				ctxt: ctxt,
 				share: &DecryptionShare{

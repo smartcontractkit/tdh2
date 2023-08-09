@@ -359,7 +359,7 @@ func VerifyShare(pk *PublicKey, ctxt *Ciphertext, share *DecryptionShare) error 
 func checkEi(pk *PublicKey, ctxt *Ciphertext, share *DecryptionShare) error {
 	g := pk.group
 	ui_hat := g.Point().Sub(g.Point().Mul(share.f_i, ctxt.u), g.Point().Mul(share.e_i, share.u_i))
-	if share.index >= len(pk.hArray) {
+	if share.index < 0 || share.index >= len(pk.hArray) {
 		return fmt.Errorf("invalid share index")
 	}
 	hi_hat := g.Point().Sub(g.Point().Mul(share.f_i, nil), g.Point().Mul(share.e_i, pk.hArray[share.index]))
