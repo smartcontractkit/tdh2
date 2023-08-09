@@ -27,10 +27,6 @@ func parseGroup(group string) (group.Group, error) {
 	switch group {
 	case nist.NewP256().String():
 		return nist.NewP256(), nil
-	case nist.NewP384().String():
-		return nist.NewP384(), nil
-	case nist.NewP521().String():
-		return nist.NewP521(), nil
 	}
 	return nil, fmt.Errorf("unsupported group: %q", group)
 }

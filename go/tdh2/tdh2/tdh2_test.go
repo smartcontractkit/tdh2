@@ -18,8 +18,6 @@ import (
 
 var supportedGroups = []string{
 	nist.NewP256().String(),
-	nist.NewP384().String(),
-	nist.NewP521().String(),
 }
 
 // unsupported implements an unsupported group
@@ -838,14 +836,6 @@ func TestParseGroup(t *testing.T) {
 		{
 			group: nist.NewP256().String(),
 			want:  nist.NewP256(),
-		},
-		{
-			group: nist.NewP384().String(),
-			want:  nist.NewP384(),
-		},
-		{
-			group: nist.NewP521().String(),
-			want:  nist.NewP521(),
 		},
 		{
 			group: "wrong",
