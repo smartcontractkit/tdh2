@@ -714,6 +714,18 @@ func TestReport(t *testing.T) {
 			wantProcessed: true,
 			want:          want,
 		},
+		{
+			name:  "all processed, duplicate decryption shares in a single observation",
+			query: makeQuery(t, ctxts),
+			obs: makeObservations(t, map[int][]string{
+				0: {"id0", "id0", "id2"},
+				1: {"id0", "id1", "id2"},
+				2: {"id0", "id1", "id2"},
+				3: {"id0", "id1", "id2"},
+			}, shares),
+			wantProcessed: true,
+			want:          want,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dp := &decryptionPlugin{
