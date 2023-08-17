@@ -281,6 +281,11 @@ func TestQuery(t *testing.T) {
 			}),
 			want: ctxts,
 		},
+		{
+			name: "duplicate request",
+			in:   append(ctxts, ctxts[1]),
+			want: ctxts,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			q := &queue{}
@@ -497,6 +502,11 @@ func TestObservation(t *testing.T) {
 				Ciphertext:   []byte("broken"),
 			})),
 			err: cmpopts.AnyError,
+		},
+		{
+			name:  "duplicate query",
+			query: makeQuery(t, append(ctxtsRaw[:3], ctxtsRaw[1])),
+			err:   cmpopts.AnyError,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -79,7 +79,16 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 	)
 
 	queryProto := Query{}
+	ciphertextIDs := make(map[string]bool)
 	for _, request := range decryptionRequests {
+		if _, ok := ciphertextIDs[string(request.CiphertextId)]; ok {
+			dp.logger.Error("DecryptionReporting Query: duplicate request, skipping it", commontypes.LogFields{
+				"ciphertextID": request.CiphertextId,
+			})
+			continue
+		}
+		ciphertextIDs[string(request.CiphertextId)] = true
+
 		ciphertext := &tdh2easy.Ciphertext{}
 		if err := ciphertext.UnmarshalVerify(request.Ciphertext, dp.publicKey); err != nil {
 			dp.decryptionQueue.SetResult(request.CiphertextId, nil, ErrUnmarshalling)
@@ -122,7 +131,16 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 	}
 
 	observationProto := Observation{}
+	ciphertextIDs := make(map[string]bool)
 	for _, request := range queryProto.DecryptionRequests {
+		if _, ok := ciphertextIDs[string(request.CiphertextId)]; ok {
+			dp.logger.Error("DecryptionReporting Observation: duplicate request in the same query, the leader is faulty", commontypes.LogFields{
+				"ciphertextID": request.CiphertextId,
+			})
+			return nil, fmt.Errorf("duplicate request in the same query")
+		}
+		ciphertextIDs[string(request.CiphertextId)] = true
+
 		ciphertext := &tdh2easy.Ciphertext{}
 		ciphertextBytes := request.Ciphertext
 		if err := ciphertext.UnmarshalVerify(ciphertextBytes, dp.publicKey); err != nil {
