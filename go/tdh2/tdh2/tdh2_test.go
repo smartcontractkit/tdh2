@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
@@ -1760,6 +1762,24 @@ func TestRedealReuseOldShares(t *testing.T) {
 			// make sure old shares cannot be used for new encryptions
 			if err := VerifyShare(newPk, c, ds); err == nil {
 				t.Error("VerifyShare did not fail")
+			}
+		})
+	}
+}
+
+func TestClear(t *testing.T) {
+	for _, typ := range supportedGroups {
+		t.Run(typ, func(t *testing.T) {
+			g, r, _, _ := params(t, typ)
+			ms, _, shares, err := GenerateKeys(g, nil, 2, 3, r)
+			require.NoError(t, err)
+			originalScalar := ms.s.Clone()
+			ms.Clear()
+			require.NotEqual(t, originalScalar, ms.s)
+			for _, sh := range shares {
+				originalScalar = sh.v.Clone()
+				sh.Clear()
+				require.NotEqual(t, originalScalar, sh.v)
 			}
 		})
 	}

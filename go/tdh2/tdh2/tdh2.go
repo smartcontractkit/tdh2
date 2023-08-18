@@ -60,6 +60,12 @@ func (s *PrivateShare) mulScalar(a group.Scalar) group.Scalar {
 	return s.group.Scalar().Mul(s.v, a)
 }
 
+func (p *PrivateShare) Clear() {
+	p.group = nil
+	p.index = 0
+	p.v.Zero()
+}
+
 // privateShareRaw is used for PrivateShare (un)marshaling.
 type privateShareRaw struct {
 	Group string
@@ -128,8 +134,13 @@ type MasterSecret struct {
 	s     group.Scalar
 }
 
-func (m MasterSecret) String() string {
+func (m *MasterSecret) String() string {
 	return fmt.Sprintf("group:%s value:hidden", m.group)
+}
+
+func (m *MasterSecret) Clear() {
+	m.group = nil
+	m.s.Zero()
 }
 
 // masterSecretRaw is used for MasterSecret (un)marshaling.
