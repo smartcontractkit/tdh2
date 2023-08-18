@@ -41,10 +41,16 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 		})
 		return nil, types.ReportingPluginInfo{}, fmt.Errorf("unable to decode reporting plugin config: %w", err)
 	}
+	if int(pluginConfig.Config.K) <= rpConfig.F || int(pluginConfig.Config.K) > 2*rpConfig.F+1 {
+		f.Logger.Error("invalid configuration: decryption threshold K must satisfy F < K <= 2F+1", commontypes.LogFields{
+			"configDigest": rpConfig.ConfigDigest.String(),
+		})
+		return nil, types.ReportingPluginInfo{}, fmt.Errorf("invalid configuration: decryption threshold K must satisfy F < K <= 2F+1")
+	}
 
 	info := types.ReportingPluginInfo{
 		Name:          "ThresholdDecryption",
-		UniqueReports: false, // Aggregating any f+1 valid decryption shares result in the same plaintext. Must match setting in OCR2Base.sol.
+		UniqueReports: false, // Aggregating any k valid decryption shares result in the same plaintext. Must match setting in OCR2Base.sol.
 		// TODO calculate limits based on the maximum size of the plaintext and ciphertextID
 		Limits: types.ReportingPluginLimits{
 			MaxQueryLength:       int(pluginConfig.Config.GetMaxQueryLengthBytes()),
@@ -234,7 +240,6 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		ciphertexts[string(request.CiphertextId)] = ciphertext
 	}
 
-	fPlusOne := dp.genericConfig.F + 1
 	validDecryptionShares := make(map[string][]*tdh2easy.DecryptionShare)
 	for _, ob := range obs {
 		observationProto := &Observation{}
@@ -278,10 +283,10 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 				continue
 			}
 
-			if len(validDecryptionShares[ciphertextID]) < fPlusOne {
+			if len(validDecryptionShares[ciphertextID]) < int(dp.specificConfig.Config.K) {
 				validDecryptionShares[ciphertextID] = append(validDecryptionShares[ciphertextID], validDecryptionShare)
 			} else {
-				dp.logger.Trace("DecryptionReporting Report: we have already f+1 valid decryption shares", commontypes.LogFields{
+				dp.logger.Trace("DecryptionReporting Report: we have already k valid decryption shares", commontypes.LogFields{
 					"ciphertextID": ciphertextID,
 					"observer":     ob.Observer,
 				})
@@ -305,12 +310,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 			continue
 		}
 
-		// This is a sanity check.
-		// OCR2.0 guarantees 2f+1 observations are from distinct oracles.
-		// which guarantees f+1 valid observations and, hence, f+1 valid decryption shares.
-		// By making sure above at most one decryption share per ciphertext request per observation,
-		// here it should be guaranteed that len(decrShares) > f.
-		if len(decrShares) < fPlusOne {
+		if len(decrShares) < int(dp.specificConfig.Config.K) {
 			dp.logger.Error("DecryptionReporting Report: not enough valid decryption shares after processing all observations, skipping aggregation of decryption shares", commontypes.LogFields{
 				"ciphertextID": id,
 			})
