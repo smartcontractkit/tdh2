@@ -79,7 +79,16 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 	)
 
 	queryProto := Query{}
+	ciphertextIDs := make(map[string]bool)
 	for _, request := range decryptionRequests {
+		if _, ok := ciphertextIDs[string(request.CiphertextId)]; ok {
+			dp.logger.Error("DecryptionReporting Query: duplicate request, skipping it", commontypes.LogFields{
+				"ciphertextID": request.CiphertextId,
+			})
+			continue
+		}
+		ciphertextIDs[string(request.CiphertextId)] = true
+
 		ciphertext := &tdh2easy.Ciphertext{}
 		if err := ciphertext.UnmarshalVerify(request.Ciphertext, dp.publicKey); err != nil {
 			dp.decryptionQueue.SetResult(request.CiphertextId, nil, ErrUnmarshalling)
@@ -122,7 +131,16 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 	}
 
 	observationProto := Observation{}
+	ciphertextIDs := make(map[string]bool)
 	for _, request := range queryProto.DecryptionRequests {
+		if _, ok := ciphertextIDs[string(request.CiphertextId)]; ok {
+			dp.logger.Error("DecryptionReporting Observation: duplicate request in the same query, the leader is faulty", commontypes.LogFields{
+				"ciphertextID": request.CiphertextId,
+			})
+			return nil, fmt.Errorf("duplicate request in the same query")
+		}
+		ciphertextIDs[string(request.CiphertextId)] = true
+
 		ciphertext := &tdh2easy.Ciphertext{}
 		ciphertextBytes := request.Ciphertext
 		if err := ciphertext.UnmarshalVerify(ciphertextBytes, dp.publicKey); err != nil {
@@ -228,8 +246,18 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 			continue
 		}
 
+		ciphertextIDs := make(map[string]bool)
 		for _, decryptionShareWithID := range observationProto.DecryptionShares {
 			ciphertextID := string(decryptionShareWithID.CiphertextId)
+			if _, ok := ciphertextIDs[ciphertextID]; ok {
+				dp.logger.Error("DecryptionReporting Report: the observation has multiple decryption shares for the same ciphertext id", commontypes.LogFields{
+					"ciphertextID": ciphertextID,
+					"observer":     ob.Observer,
+				})
+				continue
+			}
+			ciphertextIDs[ciphertextID] = true
+
 			ciphertext, ok := ciphertexts[ciphertextID]
 			if !ok {
 				dp.logger.Error("DecryptionReporting Report: there is not ciphertext in the query with matching id", commontypes.LogFields{
@@ -266,7 +294,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		id := string(request.CiphertextId)
 		decrShares, ok := validDecryptionShares[id]
 		if !ok {
-			// Request not included in any observations in the current round.
+			// Request not included in any observation in the current round.
 			continue
 		}
 		ciphertext, ok := ciphertexts[id]
@@ -280,7 +308,8 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		// This is a sanity check.
 		// OCR2.0 guarantees 2f+1 observations are from distinct oracles.
 		// which guarantees f+1 valid observations and, hence, f+1 valid decryption shares.
-		// Therefore, here it should be guaranteed that len(decrShares) > f.
+		// By making sure above at most one decryption share per ciphertext request per observation,
+		// here it should be guaranteed that len(decrShares) > f.
 		if len(decrShares) < fPlusOne {
 			dp.logger.Error("DecryptionReporting Report: not enough valid decryption shares after processing all observations, skipping aggregation of decryption shares", commontypes.LogFields{
 				"ciphertextID": id,
