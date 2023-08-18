@@ -43,6 +43,8 @@ func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.Repo
 	}
 	if int(pluginConfig.Config.K) <= rpConfig.F || int(pluginConfig.Config.K) > 2*rpConfig.F+1 {
 		f.Logger.Error("invalid configuration: decryption threshold K must satisfy F < K <= 2F+1", commontypes.LogFields{
+			"F":            rpConfig.F,
+			"K":            pluginConfig.Config.K,
 			"configDigest": rpConfig.ConfigDigest.String(),
 		})
 		return nil, types.ReportingPluginInfo{}, fmt.Errorf("invalid configuration: decryption threshold K must satisfy F < K <= 2F+1")
