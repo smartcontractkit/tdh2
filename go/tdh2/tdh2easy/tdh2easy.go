@@ -46,6 +46,10 @@ func (p *PrivateShare) UnmarshalJSON(data []byte) error {
 	return p.Unmarshal(data)
 }
 
+func (p *PrivateShare) Clear() {
+	p.p.Clear()
+}
+
 // DecryptionShare encodes TDH2 decryption share.
 type DecryptionShare struct {
 	d *tdh2.DecryptionShare
@@ -115,6 +119,10 @@ func (m *MasterSecret) Unmarshal(data []byte) error {
 
 func (m MasterSecret) UnmarshalJSON(data []byte) error {
 	return m.Unmarshal(data)
+}
+
+func (m *MasterSecret) Clear() {
+	m.m.Clear()
 }
 
 // Ciphertext encodes hybrid ciphertext.
