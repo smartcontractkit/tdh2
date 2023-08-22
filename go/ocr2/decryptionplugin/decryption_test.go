@@ -97,17 +97,27 @@ func TestNewReportingPlugin(t *testing.T) {
 				MaxQueryLengthBytes:       1,
 				MaxObservationLengthBytes: 2,
 				MaxReportLengthBytes:      3,
+				K:                         1,
 			}),
 		},
 		{
 			name: "ok minimal",
-			conf: makeConfig(t, &config.ReportingPluginConfig{}),
+			conf: makeConfig(t, &config.ReportingPluginConfig{
+				K: 1,
+			}),
 		},
 		{
 			name: "broken conf",
 			conf: types.ReportingPluginConfig{
 				OffchainConfig: []byte("broken"),
 			},
+			err: cmpopts.AnyError,
+		},
+		{
+			name: "invalid threshold",
+			conf: makeConfig(t, &config.ReportingPluginConfig{
+				K: 0,
+			}),
 			err: cmpopts.AnyError,
 		},
 	} {
@@ -580,7 +590,8 @@ func makeObservations(t *testing.T, oracle2ids map[int][]string, id2shares map[s
 }
 
 func TestReport(t *testing.T) {
-	_, pk, sh, err := tdh2easy.GenerateKeys(3, 5)
+	k := uint32(3)
+	_, pk, sh, err := tdh2easy.GenerateKeys(int(k), 5)
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
@@ -738,6 +749,12 @@ func TestReport(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			conf, err := config.DecodeReportingPluginConfig(makeConfig(t, &config.ReportingPluginConfig{
+				K: k,
+			}).OffchainConfig)
+			if err != nil {
+				t.Fatalf("DecodeReportingPluginConfig: %v", err)
+			}
 			dp := &decryptionPlugin{
 				logger:          dummyLogger{},
 				decryptionQueue: &queue{},
@@ -745,6 +762,7 @@ func TestReport(t *testing.T) {
 				genericConfig: &types.ReportingPluginConfig{
 					F: 2,
 				},
+				specificConfig: conf,
 				oracleToKeyShare: map[commontypes.OracleID]int{
 					0: 0,
 					1: 1,
@@ -788,7 +806,11 @@ func TestNewReportingPlugin_CustomConfigParser(t *testing.T) {
 		Logger:       loggers.MakeLogrusLogger(),
 	}
 
-	customParser.On("ParseConfig", mock.Anything).Return(&config.ReportingPluginConfigWrapper{}, nil).Once()
+	customParser.On("ParseConfig", mock.Anything).Return(&config.ReportingPluginConfigWrapper{
+		Config: &config.ReportingPluginConfig{
+			K: 1,
+		},
+	}, nil).Once()
 	_, _, err := factory.NewReportingPlugin(types.ReportingPluginConfig{})
 	require.NoError(t, err)
 

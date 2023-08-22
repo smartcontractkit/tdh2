@@ -16,4 +16,5 @@ message ReportingPluginConfig {
   uint32 request_count_limit = 4;
   uint32 request_total_bytes_limit = 5;
   bool require_local_request_check = 6;
+  uint32 k = 7; // Number of decryption shares required for assembling plaintext.
 }
