@@ -36,23 +36,25 @@ type decryptionPlugin struct {
 func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.ReportingPluginConfig) (types.ReportingPlugin, types.ReportingPluginInfo, error) {
 	pluginConfig, err := f.ConfigParser.ParseConfig(rpConfig.OffchainConfig)
 	if err != nil {
-		f.Logger.Error("unable to decode reporting plugin config", commontypes.LogFields{
-			"configDigest": rpConfig.ConfigDigest.String(),
-		})
-		return nil, types.ReportingPluginInfo{}, fmt.Errorf("unable to decode reporting plugin config: %w", err)
+		return nil, types.ReportingPluginInfo{},
+			fmt.Errorf("unable to decode reporting plugin config: %w", err)
 	}
+
+	// The number of decryption shares K needed to reconstruct the plaintext should satisfy F<K<=2F+1.
+	// The lower bound ensure that no F parties can alone reconstruct the secret.
+	// The upper bound ensures that there can be always enough decryption shares.
+	// It depends on the minimum number of observations collected by the leader (2F+1).
+	// Note that for configurations with K>F+1 liveness is not always satisfied as the leader might
+	// include an observation from a malicious party, whose decryption share is invalid.
+	// However, this configuration that favours safety over liveness might be desirable in certain use cases.
 	if int(pluginConfig.Config.K) <= rpConfig.F || int(pluginConfig.Config.K) > 2*rpConfig.F+1 {
-		f.Logger.Error("invalid configuration: decryption threshold K must satisfy F < K <= 2F+1", commontypes.LogFields{
-			"F":            rpConfig.F,
-			"K":            pluginConfig.Config.K,
-			"configDigest": rpConfig.ConfigDigest.String(),
-		})
-		return nil, types.ReportingPluginInfo{}, fmt.Errorf("invalid configuration: decryption threshold K must satisfy F < K <= 2F+1")
+		return nil, types.ReportingPluginInfo{},
+			fmt.Errorf("invalid configuration with K=%d and F=%d: decryption threshold K must satisfy F < K <= 2F+1", pluginConfig.Config.K, rpConfig.F)
 	}
 
 	info := types.ReportingPluginInfo{
 		Name:          "ThresholdDecryption",
-		UniqueReports: false, // Aggregating any k valid decryption shares result in the same plaintext. Must match setting in OCR2Base.sol.
+		UniqueReports: false, // Aggregating any k valid decryption shares results in the same plaintext. Must match setting in OCR2Base.sol.
 		// TODO calculate limits based on the maximum size of the plaintext and ciphertextID
 		Limits: types.ReportingPluginLimits{
 			MaxQueryLength:       int(pluginConfig.Config.GetMaxQueryLengthBytes()),
