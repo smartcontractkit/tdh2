@@ -1,6 +1,7 @@
 package decryptionplugin
 
 import (
+	"encoding/hex"
 	"fmt"
 )
 
@@ -11,7 +12,11 @@ var (
 	ErrAggregation   = fmt.Errorf("cannot aggregate valid decryption shares in report plugn function")
 )
 
-type CiphertextId = []byte
+type CiphertextId []byte
+
+func (c CiphertextId) String() string {
+	return "0x" + hex.EncodeToString(c)
+}
 
 type DecryptionRequest struct {
 	CiphertextId CiphertextId
