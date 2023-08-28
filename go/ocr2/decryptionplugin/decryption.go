@@ -90,6 +90,7 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 
 	queryProto := Query{}
 	ciphertextIDs := make(map[string]bool)
+	allIDs := []string{}
 	for _, request := range decryptionRequests {
 		if _, ok := ciphertextIDs[string(request.CiphertextId)]; ok {
 			dp.logger.Error("DecryptionReporting Query: duplicate request, skipping it", commontypes.LogFields{
@@ -112,12 +113,14 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 			CiphertextId: request.CiphertextId,
 			Ciphertext:   request.Ciphertext,
 		})
+		allIDs = append(allIDs, request.CiphertextId.String())
 	}
 
 	dp.logger.Debug("DecryptionReporting Query: end", commontypes.LogFields{
-		"epoch":    ts.Epoch,
-		"round":    ts.Round,
-		"queryLen": len(queryProto.DecryptionRequests),
+		"epoch":         ts.Epoch,
+		"round":         ts.Round,
+		"queryLen":      len(queryProto.DecryptionRequests),
+		"ciphertextIDs": allIDs,
 	})
 	queryProtoBytes, err := proto.Marshal(&queryProto)
 	if err != nil {
@@ -142,6 +145,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 
 	observationProto := Observation{}
 	ciphertextIDs := make(map[string]bool)
+	decryptedIDs := []string{}
 	for _, request := range queryProto.DecryptionRequests {
 		ciphertextId := CiphertextId(request.CiphertextId)
 		if _, ok := ciphertextIDs[string(ciphertextId)]; ok {
@@ -205,6 +209,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 			CiphertextId:    ciphertextId,
 			DecryptionShare: decryptionShareBytes,
 		})
+		decryptedIDs = append(decryptedIDs, ciphertextId.String())
 	}
 
 	dp.logger.Debug("DecryptionReporting Observation: end", commontypes.LogFields{
@@ -212,6 +217,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 		"round":             ts.Round,
 		"decryptedRequests": len(observationProto.DecryptionShares),
 		"totalRequests":     len(queryProto.DecryptionRequests),
+		"ciphertextIDs":     decryptedIDs,
 	})
 	observationProtoBytes, err := proto.Marshal(&observationProto)
 	if err != nil {
@@ -308,6 +314,9 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		decrShares, ok := validDecryptionShares[ciphertextIdRawStr]
 		if !ok {
 			// Request not included in any observation in the current round.
+			dp.logger.Debug("DecryptionReporting Report: ciphertextID was not included in any observation in the current round", commontypes.LogFields{
+				"ciphertextID": ciphertextId.String(),
+			})
 			continue
 		}
 		ciphertext, ok := ciphertexts[ciphertextIdRawStr]
@@ -319,7 +328,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		}
 
 		if len(decrShares) < int(dp.specificConfig.Config.K) {
-			dp.logger.Error("DecryptionReporting Report: not enough valid decryption shares after processing all observations, skipping aggregation of decryption shares", commontypes.LogFields{
+			dp.logger.Debug("DecryptionReporting Report: not enough valid decryption shares after processing all observations, skipping aggregation of decryption shares", commontypes.LogFields{
 				"ciphertextID": ciphertextId.String(),
 			})
 			continue
