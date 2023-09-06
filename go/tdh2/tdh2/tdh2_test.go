@@ -20,8 +20,6 @@ import (
 
 var supportedGroups = []string{
 	nist.NewP256().String(),
-	nist.NewP384().String(),
-	nist.NewP521().String(),
 }
 
 // unsupported implements an unsupported group
@@ -566,6 +564,17 @@ func TestCheckEi(t *testing.T) {
 				err: cmpopts.AnyError,
 			},
 			{
+				name: "negative share index",
+				ctxt: ctxt,
+				share: &DecryptionShare{
+					index: -1,
+					u_i:   ds.u_i,
+					e_i:   ds.e_i,
+					f_i:   ds.f_i,
+				},
+				err: cmpopts.AnyError,
+			},
+			{
 				name: "broken U",
 				ctxt: ctxt,
 				share: &DecryptionShare{
@@ -840,14 +849,6 @@ func TestParseGroup(t *testing.T) {
 		{
 			group: nist.NewP256().String(),
 			want:  nist.NewP256(),
-		},
-		{
-			group: nist.NewP384().String(),
-			want:  nist.NewP384(),
-		},
-		{
-			group: nist.NewP521().String(),
-			want:  nist.NewP521(),
 		},
 		{
 			group: "wrong",

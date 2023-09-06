@@ -22,6 +22,9 @@ func symEncrypt(msg, key []byte) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot use AES: %v", err)
 	}
+	if uint64(len(msg)) > ((1<<32)-2)*uint64(block.BlockSize()) {
+		return nil, nil, fmt.Errorf("message too long")
+	}
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot use GCM mode: %v", err)
