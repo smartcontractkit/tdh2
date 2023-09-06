@@ -1,8 +1,6 @@
 const rnd = require('bcrypto/lib/random');
 const sha256 = require('bcrypto/lib/sha256');
-const sha512 = require('bcrypto/lib/sha512');
 const elliptic = require('bcrypto/lib/js/elliptic');
-const bn = require('bcrypto/lib/bn');
 const cipher = require('bcrypto/lib/cipher');
 
 const {
@@ -82,14 +80,14 @@ function hash2(msg, label, p1, p2, p3, p4) {
   if (label.length != tdh2InputSize)
     throw new Error('label has incorrect length');
 
-  const h = sha512.digest(Buffer.concat([
+  const h = sha256.digest(Buffer.concat([
     Buffer.from("tdh2hash2"),
     msg,
     label,
     concatenate([p1,p2,p3,p4])
   ]));
 
-  return bn.decode(h, p256.endian).mod(p256.n);
+  return p256.decodeScalar(h)
 }
 
 function xor(a, b) {
