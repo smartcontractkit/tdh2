@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	ErrNotFound      = fmt.Errorf("not found")
-	ErrUnmarshalling = fmt.Errorf("cannot unmarshal the ciphertext in the query plugin function")
-	ErrDecryption    = fmt.Errorf("cannot decrypt the ciphertext with the private key share in observation plugin function")
-	ErrAggregation   = fmt.Errorf("cannot aggregate valid decryption shares in report plugn function")
+	ErrNotFound                         = fmt.Errorf("not found")
+	ErrUnmarshalling                    = fmt.Errorf("cannot unmarshal the ciphertext in the query plugin function")
+	ErrDecryption                       = fmt.Errorf("cannot decrypt the ciphertext with the private key share in observation plugin function")
+	ErrAggregation                      = fmt.Errorf("cannot aggregate valid decryption shares in report plugn function")
 )
 
 type CiphertextId []byte

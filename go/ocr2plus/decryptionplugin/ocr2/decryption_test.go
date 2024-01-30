@@ -1,10 +1,11 @@
-package decryptionplugin
+package ocr2decryptionplugin
 
 import (
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin"
 	"reflect"
 	"sort"
 	"testing"
@@ -34,11 +35,11 @@ func (l dummyLogger) Critical(msg string, fields commontypes.LogFields) {}
 
 // queue implements the DecryptionQueuingService interface.
 type queue struct {
-	q   []DecryptionRequest
+	q   []decryptionplugin.DecryptionRequest
 	res [][]byte
 }
 
-func (q *queue) GetRequests(requestCountLimit int, totalBytesLimit int) []DecryptionRequest {
+func (q *queue) GetRequests(requestCountLimit int, totalBytesLimit int) []decryptionplugin.DecryptionRequest {
 	stop := 0
 	for i, tot := 0, 0; i < len(q.q) && i < requestCountLimit; i++ {
 		tot += len(q.q[i].Ciphertext)
@@ -52,7 +53,7 @@ func (q *queue) GetRequests(requestCountLimit int, totalBytesLimit int) []Decryp
 	return out
 }
 
-func (q *queue) GetCiphertext(ciphertextId CiphertextId) ([]byte, error) {
+func (q *queue) GetCiphertext(ciphertextId decryptionplugin.CiphertextId) ([]byte, error) {
 	if bytes.Equal([]byte("please fail"), ciphertextId) {
 		return nil, fmt.Errorf("some error")
 	}
@@ -61,10 +62,10 @@ func (q *queue) GetCiphertext(ciphertextId CiphertextId) ([]byte, error) {
 			return e.Ciphertext, nil
 		}
 	}
-	return nil, ErrNotFound
+	return nil, decryptionplugin.ErrNotFound
 }
 
-func (q *queue) SetResult(ciphertextId CiphertextId, plaintext []byte, err error) {
+func (q *queue) SetResult(ciphertextId decryptionplugin.CiphertextId, plaintext []byte, err error) {
 	q.res = append(q.res, ciphertextId)
 	q.res = append(q.res, plaintext)
 }
@@ -249,7 +250,7 @@ func TestQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
-	ctxts := []*CiphertextWithID{}
+	ctxts := []*decryptionplugin.CiphertextWithID{}
 	for i := 0; i < 10; i++ {
 		id := []byte(fmt.Sprintf("%d", i))
 		c, err := tdh2easy.Encrypt(pk, id)
@@ -260,15 +261,15 @@ func TestQuery(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Marshal: %v", err)
 		}
-		ctxts = append(ctxts, &CiphertextWithID{
+		ctxts = append(ctxts, &decryptionplugin.CiphertextWithID{
 			CiphertextId: id,
 			Ciphertext:   raw,
 		})
 	}
 	for _, tc := range []struct {
 		name string
-		in   []*CiphertextWithID
-		want []*CiphertextWithID
+		in   []*decryptionplugin.CiphertextWithID
+		want []*decryptionplugin.CiphertextWithID
 	}{
 		{
 			name: "empty",
@@ -285,7 +286,7 @@ func TestQuery(t *testing.T) {
 		},
 		{
 			name: "one wrong",
-			in: append(ctxts, &CiphertextWithID{
+			in: append(ctxts, &decryptionplugin.CiphertextWithID{
 				CiphertextId: []byte("1"),
 				Ciphertext:   []byte("broken"),
 			}),
@@ -300,7 +301,7 @@ func TestQuery(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			q := &queue{}
 			for _, e := range tc.in {
-				q.q = append(q.q, DecryptionRequest{
+				q.q = append(q.q, decryptionplugin.DecryptionRequest{
 					CiphertextId: e.CiphertextId,
 					Ciphertext:   e.Ciphertext,
 				})
@@ -320,11 +321,11 @@ func TestQuery(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Query: %v", err)
 			}
-			got := Query{}
+			got := decryptionplugin.Query{}
 			if err := proto.Unmarshal(b, &got); err != nil {
 				t.Fatalf("Unmarshal: %v", err)
 			}
-			if d := cmp.Diff(got.DecryptionRequests, tc.want, cmpopts.IgnoreUnexported(CiphertextWithID{})); d != "" {
+			if d := cmp.Diff(got.DecryptionRequests, tc.want, cmpopts.IgnoreUnexported(decryptionplugin.CiphertextWithID{})); d != "" {
 				t.Errorf("got/want diff=%v", d)
 			}
 		})
@@ -332,8 +333,8 @@ func TestQuery(t *testing.T) {
 }
 
 func TestShouldAcceptFinalizedReport(t *testing.T) {
-	r := &Report{
-		ProcessedDecryptedRequests: []*ProcessedDecryptionRequest{
+	r := &decryptionplugin.Report{
+		ProcessedDecryptedRequests: []*decryptionplugin.ProcessedDecryptionRequest{
 			{
 				CiphertextId: []byte("id1"),
 				Plaintext:    []byte("p1"),
@@ -394,9 +395,9 @@ func TestShouldAcceptFinalizedReport(t *testing.T) {
 	}
 }
 
-func makeQuery(t *testing.T, c []*CiphertextWithID) []byte {
+func makeQuery(t *testing.T, c []*decryptionplugin.CiphertextWithID) []byte {
 	t.Helper()
-	b, err := proto.Marshal(&Query{
+	b, err := proto.Marshal(&decryptionplugin.Query{
 		DecryptionRequests: c,
 	})
 	if err != nil {
@@ -417,7 +418,7 @@ func TestObservation(t *testing.T) {
 	}
 	q := &queue{}
 	ctxts := []*ctxtWithId{}
-	ctxtsRaw := []*CiphertextWithID{}
+	ctxtsRaw := []*decryptionplugin.CiphertextWithID{}
 	for i := 0; i < 10; i++ {
 		id := []byte(fmt.Sprintf("%d", i))
 		c, err := tdh2easy.Encrypt(pk, id)
@@ -428,13 +429,13 @@ func TestObservation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Marshal: %v", err)
 		}
-		ctxtsRaw = append(ctxtsRaw, &CiphertextWithID{
+		ctxtsRaw = append(ctxtsRaw, &decryptionplugin.CiphertextWithID{
 			CiphertextId: id,
 			Ciphertext:   raw,
 		})
 		// add only 5 to the queue
 		if i < 5 {
-			q.q = append(q.q, DecryptionRequest{
+			q.q = append(q.q, decryptionplugin.DecryptionRequest{
 				CiphertextId: id,
 				Ciphertext:   raw,
 			})
@@ -448,7 +449,7 @@ func TestObservation(t *testing.T) {
 		name  string
 		query []byte
 		local bool
-		queue DecryptionQueuingService
+		queue decryptionplugin.DecryptionQueuingService
 		err   error
 		want  []*ctxtWithId
 	}{
@@ -487,7 +488,7 @@ func TestObservation(t *testing.T) {
 		},
 		{
 			name: "queue failing",
-			query: makeQuery(t, append(ctxtsRaw[:5], &CiphertextWithID{
+			query: makeQuery(t, append(ctxtsRaw[:5], &decryptionplugin.CiphertextWithID{
 				CiphertextId: []byte("please fail"),
 				Ciphertext:   ctxtsRaw[5].Ciphertext,
 			})),
@@ -497,7 +498,7 @@ func TestObservation(t *testing.T) {
 		},
 		{
 			name: "queued ciphertext mismatch",
-			query: makeQuery(t, append(ctxtsRaw[:4], &CiphertextWithID{
+			query: makeQuery(t, append(ctxtsRaw[:4], &decryptionplugin.CiphertextWithID{
 				CiphertextId: ctxtsRaw[4].CiphertextId,
 				Ciphertext:   ctxtsRaw[5].Ciphertext,
 			})),
@@ -507,7 +508,7 @@ func TestObservation(t *testing.T) {
 		},
 		{
 			name: "broken ciphertext",
-			query: makeQuery(t, append(ctxtsRaw[:3], &CiphertextWithID{
+			query: makeQuery(t, append(ctxtsRaw[:3], &decryptionplugin.CiphertextWithID{
 				CiphertextId: []byte("id"),
 				Ciphertext:   []byte("broken"),
 			})),
@@ -537,7 +538,7 @@ func TestObservation(t *testing.T) {
 			} else if err != nil {
 				return
 			}
-			var got Observation
+			var got decryptionplugin.Observation
 			if err := proto.Unmarshal(b, &got); err != nil {
 				t.Fatalf("Unmarshal: %v", err)
 			}
@@ -568,14 +569,14 @@ func makeObservations(t *testing.T, oracle2ids map[int][]string, id2shares map[s
 	t.Helper()
 	var out []types.AttributedObservation
 	for oracle, ids := range oracle2ids {
-		decShares := []*DecryptionShareWithID{}
+		decShares := []*decryptionplugin.DecryptionShareWithID{}
 		for _, id := range ids {
-			decShares = append(decShares, &DecryptionShareWithID{
+			decShares = append(decShares, &decryptionplugin.DecryptionShareWithID{
 				CiphertextId:    []byte(id),
 				DecryptionShare: id2shares[id][oracle],
 			})
 		}
-		ob, err := proto.Marshal(&Observation{
+		ob, err := proto.Marshal(&decryptionplugin.Observation{
 			DecryptionShares: decShares,
 		})
 		if err != nil {
@@ -595,8 +596,8 @@ func TestReport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
-	want := []*ProcessedDecryptionRequest{}
-	ctxts := []*CiphertextWithID{}
+	want := []*decryptionplugin.ProcessedDecryptionRequest{}
+	ctxts := []*decryptionplugin.CiphertextWithID{}
 	shares := map[string][][]byte{}
 	// generate id-plaintext pairs, "id0"->"0", "id1"->"1", "id2"->"2"
 	for i := 0; i < 3; i++ {
@@ -610,11 +611,11 @@ func TestReport(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Marshal: %v", err)
 		}
-		ctxts = append(ctxts, &CiphertextWithID{
+		ctxts = append(ctxts, &decryptionplugin.CiphertextWithID{
 			CiphertextId: id,
 			Ciphertext:   raw,
 		})
-		want = append(want, &ProcessedDecryptionRequest{
+		want = append(want, &decryptionplugin.ProcessedDecryptionRequest{
 			CiphertextId: id,
 			Plaintext:    plain,
 		})
@@ -636,7 +637,7 @@ func TestReport(t *testing.T) {
 		obs           []types.AttributedObservation
 		err           error
 		wantProcessed bool
-		want          []*ProcessedDecryptionRequest
+		want          []*decryptionplugin.ProcessedDecryptionRequest
 	}{
 		{
 			name:  "empty",
@@ -649,7 +650,7 @@ func TestReport(t *testing.T) {
 		},
 		{
 			name: "broken ciphertext",
-			query: makeQuery(t, append(ctxts, &CiphertextWithID{
+			query: makeQuery(t, append(ctxts, &decryptionplugin.CiphertextWithID{
 				CiphertextId: []byte("id"),
 				Ciphertext:   []byte("broken"),
 			})),
@@ -783,7 +784,7 @@ func TestReport(t *testing.T) {
 			// make sure Report() output is deterministic
 			_, secondReportBytes, _ := dp.Report(context.Background(), types.ReportTimestamp{}, tc.query, tc.obs)
 			require.Equal(t, reportBytes, secondReportBytes)
-			var report Report
+			var report decryptionplugin.Report
 			if err := proto.Unmarshal(reportBytes, &report); err != nil {
 				t.Errorf("Unmarshal: %v", err)
 			}
@@ -792,7 +793,7 @@ func TestReport(t *testing.T) {
 			sort.Slice(got, func(i, j int) bool {
 				return string(got[i].CiphertextId) < string(got[j].CiphertextId)
 			})
-			if d := cmp.Diff(got, tc.want, cmpopts.IgnoreUnexported(ProcessedDecryptionRequest{})); d != "" {
+			if d := cmp.Diff(got, tc.want, cmpopts.IgnoreUnexported(decryptionplugin.ProcessedDecryptionRequest{})); d != "" {
 				t.Errorf("got/want diff=%v", d)
 			}
 		})

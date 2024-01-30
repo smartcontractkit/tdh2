@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option go_package = "./;decryptionplugin";
+
+package ocr3_types;
+
+import "types.proto";
+
+message Outcome {
+  repeated types.ProcessedDecryptionRequest processedDecryptedRequests = 1;
+}
+
+

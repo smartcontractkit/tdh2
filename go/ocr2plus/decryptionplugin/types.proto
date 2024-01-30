@@ -25,7 +25,3 @@ message ProcessedDecryptionRequest {
 	bytes ciphertext_id = 1;
 	bytes plaintext = 2;
 }
-
-message Report {
-	repeated ProcessedDecryptionRequest processedDecryptedRequests = 1;
-}

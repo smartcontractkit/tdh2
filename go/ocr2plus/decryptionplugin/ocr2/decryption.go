@@ -1,4 +1,4 @@
-package decryptionplugin
+package ocr2decryptionplugin
 
 import (
 	"bytes"
@@ -8,13 +8,14 @@ import (
 
 	"github.com/smartcontractkit/libocr/commontypes"
 	"github.com/smartcontractkit/libocr/offchainreporting2/types"
+	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin"
 	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin/config"
 	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
 	"google.golang.org/protobuf/proto"
 )
 
 type DecryptionReportingPluginFactory struct {
-	DecryptionQueue  DecryptionQueuingService
+	DecryptionQueue  decryptionplugin.DecryptionQueuingService
 	ConfigParser     config.ConfigParser
 	PublicKey        *tdh2easy.PublicKey
 	PrivKeyShare     *tdh2easy.PrivateShare
@@ -24,7 +25,7 @@ type DecryptionReportingPluginFactory struct {
 
 type decryptionPlugin struct {
 	logger           commontypes.Logger
-	decryptionQueue  DecryptionQueuingService
+	decryptionQueue  decryptionplugin.DecryptionQueuingService
 	publicKey        *tdh2easy.PublicKey
 	privKeyShare     *tdh2easy.PrivateShare
 	oracleToKeyShare map[commontypes.OracleID]int
@@ -88,7 +89,7 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 		int(dp.specificConfig.Config.RequestTotalBytesLimit),
 	)
 
-	queryProto := Query{}
+	queryProto := decryptionplugin.Query{}
 	ciphertextIDs := make(map[string]bool)
 	allIDs := []string{}
 	for _, request := range decryptionRequests {
@@ -102,14 +103,14 @@ func (dp *decryptionPlugin) Query(ctx context.Context, ts types.ReportTimestamp)
 
 		ciphertext := &tdh2easy.Ciphertext{}
 		if err := ciphertext.UnmarshalVerify(request.Ciphertext, dp.publicKey); err != nil {
-			dp.decryptionQueue.SetResult(request.CiphertextId, nil, ErrUnmarshalling)
+			dp.decryptionQueue.SetResult(request.CiphertextId, nil, decryptionplugin.ErrUnmarshalling)
 			dp.logger.Error("DecryptionReporting Query: cannot unmarshal the ciphertext, skipping it", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": request.CiphertextId.String(),
 			})
 			continue
 		}
-		queryProto.DecryptionRequests = append(queryProto.GetDecryptionRequests(), &CiphertextWithID{
+		queryProto.DecryptionRequests = append(queryProto.GetDecryptionRequests(), &decryptionplugin.CiphertextWithID{
 			CiphertextId: request.CiphertextId,
 			Ciphertext:   request.Ciphertext,
 		})
@@ -138,16 +139,16 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 		"round": ts.Round,
 	})
 
-	queryProto := &Query{}
+	queryProto := &decryptionplugin.Query{}
 	if err := proto.Unmarshal(query, queryProto); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal query: %w", err)
 	}
 
-	observationProto := Observation{}
+	observationProto := decryptionplugin.Observation{}
 	ciphertextIDs := make(map[string]bool)
 	decryptedIDs := []string{}
 	for _, request := range queryProto.DecryptionRequests {
-		ciphertextId := CiphertextId(request.CiphertextId)
+		ciphertextId := decryptionplugin.CiphertextId(request.CiphertextId)
 		if _, ok := ciphertextIDs[string(ciphertextId)]; ok {
 			dp.logger.Error("DecryptionReporting Observation: duplicate request in the same query, the leader is faulty", commontypes.LogFields{
 				"ciphertextID": ciphertextId.String(),
@@ -167,7 +168,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 		}
 		if dp.specificConfig.Config.RequireLocalRequestCheck {
 			queueCiphertextBytes, err := dp.decryptionQueue.GetCiphertext(ciphertextId)
-			if err != nil && errors.Is(err, ErrNotFound) {
+			if err != nil && errors.Is(err, decryptionplugin.ErrNotFound) {
 				dp.logger.Warn("DecryptionReporting Observation: cannot find ciphertext locally, skipping it", commontypes.LogFields{
 					"error":        err,
 					"ciphertextID": ciphertextId.String(),
@@ -190,7 +191,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 
 		decryptionShare, err := tdh2easy.Decrypt(ciphertext, dp.privKeyShare)
 		if err != nil {
-			dp.decryptionQueue.SetResult(ciphertextId, nil, ErrDecryption)
+			dp.decryptionQueue.SetResult(ciphertextId, nil, decryptionplugin.ErrDecryption)
 			dp.logger.Error("DecryptionReporting Observation: cannot decrypt the ciphertext with the private key share", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": ciphertextId.String(),
@@ -205,7 +206,7 @@ func (dp *decryptionPlugin) Observation(ctx context.Context, ts types.ReportTime
 			})
 			continue
 		}
-		observationProto.DecryptionShares = append(observationProto.DecryptionShares, &DecryptionShareWithID{
+		observationProto.DecryptionShares = append(observationProto.DecryptionShares, &decryptionplugin.DecryptionShareWithID{
 			CiphertextId:    ciphertextId,
 			DecryptionShare: decryptionShareBytes,
 		})
@@ -234,13 +235,13 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		"nObservations": len(obs),
 	})
 
-	queryProto := &Query{}
+	queryProto := &decryptionplugin.Query{}
 	if err := proto.Unmarshal(query, queryProto); err != nil {
 		return false, nil, fmt.Errorf("cannot unmarshal query: %w ", err)
 	}
 	ciphertexts := make(map[string]*tdh2easy.Ciphertext)
 	for _, request := range queryProto.DecryptionRequests {
-		ciphertextId := CiphertextId(request.CiphertextId)
+		ciphertextId := decryptionplugin.CiphertextId(request.CiphertextId)
 		ciphertext := &tdh2easy.Ciphertext{}
 		if err := ciphertext.UnmarshalVerify(request.Ciphertext, dp.publicKey); err != nil {
 			dp.logger.Error("DecryptionReporting Report: cannot unmarshal and verify the ciphertext, the leader is faulty", commontypes.LogFields{
@@ -254,7 +255,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 
 	validDecryptionShares := make(map[string][]*tdh2easy.DecryptionShare)
 	for _, ob := range obs {
-		observationProto := &Observation{}
+		observationProto := &decryptionplugin.Observation{}
 		if err := proto.Unmarshal(ob.Observation, observationProto); err != nil {
 			dp.logger.Error("DecryptionReporting Report: cannot unmarshal observation, skipping it", commontypes.LogFields{
 				"error":    err,
@@ -265,7 +266,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 
 		ciphertextIDs := make(map[string]bool)
 		for _, decryptionShareWithID := range observationProto.DecryptionShares {
-			ciphertextId := CiphertextId(decryptionShareWithID.CiphertextId)
+			ciphertextId := decryptionplugin.CiphertextId(decryptionShareWithID.CiphertextId)
 			ciphertextIdRawStr := string(ciphertextId)
 			if _, ok := ciphertextIDs[ciphertextIdRawStr]; ok {
 				dp.logger.Error("DecryptionReporting Report: the observation has multiple decryption shares for the same ciphertext id", commontypes.LogFields{
@@ -307,9 +308,9 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 		}
 	}
 
-	reportProto := Report{}
+	reportProto := decryptionplugin.Report{}
 	for _, request := range queryProto.DecryptionRequests {
-		ciphertextId := CiphertextId(request.CiphertextId)
+		ciphertextId := decryptionplugin.CiphertextId(request.CiphertextId)
 		ciphertextIdRawStr := string(ciphertextId)
 		decrShares, ok := validDecryptionShares[ciphertextIdRawStr]
 		if !ok {
@@ -336,7 +337,7 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 
 		plaintext, err := tdh2easy.Aggregate(ciphertext, decrShares, dp.genericConfig.N)
 		if err != nil {
-			dp.decryptionQueue.SetResult(ciphertextId, nil, ErrAggregation)
+			dp.decryptionQueue.SetResult(ciphertextId, nil, decryptionplugin.ErrAggregation)
 			dp.logger.Error("DecryptionReporting Report: cannot aggregate decryption shares", commontypes.LogFields{
 				"error":        err,
 				"ciphertextID": ciphertextId.String(),
@@ -349,10 +350,11 @@ func (dp *decryptionPlugin) Report(ctx context.Context, ts types.ReportTimestamp
 			"round":        ts.Round,
 			"ciphertextID": ciphertextId.String(),
 		})
-		reportProto.ProcessedDecryptedRequests = append(reportProto.ProcessedDecryptedRequests, &ProcessedDecryptionRequest{
-			CiphertextId: ciphertextId,
-			Plaintext:    plaintext,
-		})
+		reportProto.ProcessedDecryptedRequests = append(reportProto.ProcessedDecryptedRequests,
+			&decryptionplugin.ProcessedDecryptionRequest{
+				CiphertextId: ciphertextId,
+				Plaintext:    plaintext,
+			})
 	}
 
 	dp.logger.Debug("DecryptionReporting Report: end", commontypes.LogFields{
@@ -403,7 +405,7 @@ func (dp *decryptionPlugin) ShouldAcceptFinalizedReport(ctx context.Context, ts 
 		"round": ts.Round,
 	})
 
-	reportProto := &Report{}
+	reportProto := &decryptionplugin.Report{}
 	if err := proto.Unmarshal(report, reportProto); err != nil {
 		return false, fmt.Errorf("cannot unmarshal report: %w", err)
 	}
