@@ -46,7 +46,19 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
+          go-version: '1.21'
+
+      - name: Ensure dependencies synced & tidy
+        working-directory: ./go
+        run: |
+          go work sync
+          pushd tdh2
+          go mod tidy
+          popd
+          pushd ocr2/decryptionplugin
+          go mod tidy
+          popd
+          git diff --minimal --exit-code
 
       - name: Build and test OCR2 plugin
         working-directory: ./go/ocr2/decryptionplugin
