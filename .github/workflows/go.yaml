@@ -116,7 +116,7 @@ jobs:
           echo "sonarqube_golangci_report_paths=$(find -type f -name 'golangci-lint-report.xml' -printf "%p,")" >> $GITHUB_OUTPUT
       
       - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v1.2.0
+        uses: sonarsource/sonarqube-scan-action@69c1a75940dec6249b86dace6b630d3a2ae9d2a7 # v2.0.1
         with:
           args: >
             -Dsonar.go.coverage.reportPaths=${{ steps.sonarqube_report_paths.outputs.sonarqube_coverage_report_paths }}
