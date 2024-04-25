@@ -33,7 +33,7 @@ type decryptionPlugin struct {
 }
 
 // NewReportingPlugin complies with ReportingPluginFactory.
-func (f DecryptionReportingPluginFactory) NewReportingPlugin(rpConfig types.ReportingPluginConfig) (types.ReportingPlugin, types.ReportingPluginInfo, error) {
+func (f DecryptionReportingPluginFactory) NewReportingPlugin(ctx context.Context, rpConfig types.ReportingPluginConfig) (types.ReportingPlugin, types.ReportingPluginInfo, error) {
 	pluginConfig, err := f.ConfigParser.ParseConfig(rpConfig.OffchainConfig)
 	if err != nil {
 		return nil, types.ReportingPluginInfo{},

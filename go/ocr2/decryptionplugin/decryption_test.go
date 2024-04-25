@@ -122,13 +122,15 @@ func TestNewReportingPlugin(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
 			factory := DecryptionReportingPluginFactory{
 				Logger:       dummyLogger{},
 				PublicKey:    pk,
 				PrivKeyShare: sh[0],
 				ConfigParser: &config.DefaultConfigParser{},
 			}
-			plugin, info, err := factory.NewReportingPlugin(tc.conf)
+			plugin, info, err := factory.NewReportingPlugin(ctx, tc.conf)
 			if !cmp.Equal(err, tc.err, cmpopts.EquateErrors()) {
 				t.Fatalf("err=%v, want=%v", err, tc.err)
 			} else if err != nil {
@@ -800,6 +802,8 @@ func TestReport(t *testing.T) {
 }
 
 func TestNewReportingPlugin_CustomConfigParser(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 	customParser := mocks.NewConfigParser(t)
 	factory := DecryptionReportingPluginFactory{
 		ConfigParser: customParser,
@@ -811,10 +815,10 @@ func TestNewReportingPlugin_CustomConfigParser(t *testing.T) {
 			K: 1,
 		},
 	}, nil).Once()
-	_, _, err := factory.NewReportingPlugin(types.ReportingPluginConfig{})
+	_, _, err := factory.NewReportingPlugin(ctx, types.ReportingPluginConfig{})
 	require.NoError(t, err)
 
 	customParser.On("ParseConfig", mock.Anything).Return(nil, errors.New("error")).Once()
-	_, _, err = factory.NewReportingPlugin(types.ReportingPluginConfig{})
+	_, _, err = factory.NewReportingPlugin(ctx, types.ReportingPluginConfig{})
 	require.Error(t, err)
 }
