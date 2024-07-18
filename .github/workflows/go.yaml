@@ -66,6 +66,11 @@ jobs:
           go build -v ./...
           go test -v ./... -coverpkg=./... -coverprofile=ocr2_decryptionplugin_coverage.txt
 
+      - name: Race test OCR2 plugin
+        working-directory: ./go/ocr2/decryptionplugin
+        run: |
+          go test -race -v ./... -coverpkg=./... -coverprofile=ocr2_decryptionplugin_race_coverage.txt
+
       - name: Download npm deps
         working-directory: ./js/tdh2
         run: npm install
@@ -75,6 +80,11 @@ jobs:
         run: |
           go build -v ./...
           go test -v ./... -coverpkg=./... -coverprofile=tdh_coverage.txt
+      
+      - name: Race test TDH2
+        working-directory: ./go/tdh2
+        run: |
+          go test -race -v ./... -coverpkg=./... -coverprofile=tdh_race_coverage.txt
 
       - name: Upload Go test reports
         if: always()
@@ -83,7 +93,9 @@ jobs:
           name: go-test-results
           path: |
             ./go/ocr2/decryptionplugin/ocr2_decryptionplugin_coverage.txt
+            ./go/ocr2/decryptionplugin/ocr2_decryptionplugin_race_coverage.txt
             ./go/tdh2/tdh_coverage.txt
+            ./go/tdh2/tdh_race_coverage.txt
 
 
   sonar-scan:
@@ -124,4 +136,3 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      
