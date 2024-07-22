@@ -3,3 +3,6 @@
 *report.txt
 *report.json
 *.out
+
+# logs
+*.log
