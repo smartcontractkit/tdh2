@@ -126,8 +126,6 @@ function encrypt(pub, msg) {
 // where _tdh2Ctxt, _ctxt, and _nonce are length-prefixed binary strings.
 // This is equivalent to ciphertextRaw.Marshal() in the Go implementation.
 function lengthPrefixedStringify(tdh2Ctxt, ctxt, nonce) {
-
-  // Concatenate all length-prefixed buffers
   return Buffer.concat([
     prefixWithLength(tdh2Ctxt),
     prefixWithLength(ctxt),
