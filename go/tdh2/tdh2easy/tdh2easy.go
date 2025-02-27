@@ -199,9 +199,9 @@ type ciphertextRaw struct {
 
 func (c ciphertextRaw) Marshal() ([]byte, error) {
 	buf := make([]byte, 0, 4+len(c.TDH2Ctxt)+4+len(c.SymCtxt)+4+len(c.Nonce))
-	buf = append(buf, encodeLenBytes(c.TDH2Ctxt)...)
-	buf = append(buf, encodeLenBytes(c.SymCtxt)...)
-	buf = append(buf, encodeLenBytes(c.Nonce)...)
+	buf = append(buf, prefixWithLength(c.TDH2Ctxt)...)
+	buf = append(buf, prefixWithLength(c.SymCtxt)...)
+	buf = append(buf, prefixWithLength(c.Nonce)...)
 	return buf, nil
 }
 
@@ -213,15 +213,15 @@ func (c *ciphertextRaw) Unmarshal(data []byte) error {
 	var err error
 	offset := 0
 
-	c.TDH2Ctxt, offset, err = decodeLenBytes(data, offset)
+	c.TDH2Ctxt, offset, err = parseLengthPrefixed(data, offset)
 	if err != nil {
 		return fmt.Errorf("cannot decode TDH2 ciphertext: %w", err)
 	}
-	c.SymCtxt, offset, err = decodeLenBytes(data, offset)
+	c.SymCtxt, offset, err = parseLengthPrefixed(data, offset)
 	if err != nil {
 		return fmt.Errorf("cannot decode symmetric ciphertext: %w", err)
 	}
-	c.Nonce, _, err = decodeLenBytes(data, offset)
+	c.Nonce, _, err = parseLengthPrefixed(data, offset)
 	if err != nil {
 		return fmt.Errorf("cannot decode nonce: %w", err)
 	}
@@ -229,8 +229,9 @@ func (c *ciphertextRaw) Unmarshal(data []byte) error {
 	return nil
 }
 
-// encodeLenBytes encodes length-prefixed bytes.
-func encodeLenBytes(b []byte) []byte {
+// prefixWithLength encodes length-prefixed bytes.
+// The length is encoded as a 4-byte big-endian integer.
+func prefixWithLength(b []byte) []byte {
 	length := len(b)
 	buf := make([]byte, 4+length)
 	binary.BigEndian.PutUint32(buf[:4], uint32(length))
@@ -238,8 +239,8 @@ func encodeLenBytes(b []byte) []byte {
 	return buf
 }
 
-// decodeLenBytes decodes length-prefixed bytes.
-func decodeLenBytes(data []byte, offset int) ([]byte, int, error) {
+// parseLengthPrefixed decodes length-prefixed bytes.
+func parseLengthPrefixed(data []byte, offset int) ([]byte, int, error) {
 	if offset+4 > len(data) {
 		return nil, 0, fmt.Errorf("unexpected EOF while reading length")
 	}
