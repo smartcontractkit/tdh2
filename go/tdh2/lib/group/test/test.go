@@ -9,7 +9,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group"
 )
 
 func testPointSet(t *testing.T, g group.Group, rand cipher.Stream) {

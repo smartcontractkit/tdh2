@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/test"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group/test"
 )
 
 var benchmarks = []*test.GroupBench{

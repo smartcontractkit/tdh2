@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/nist"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group/nist"
 	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2"
 )
 

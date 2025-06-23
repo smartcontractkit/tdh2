@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/nist"
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/share"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group/nist"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group/share"
 )
 
 var (
