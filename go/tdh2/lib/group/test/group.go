@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group"
 )
 
 // GroupBench is a generic benchmark suite for group.groups.

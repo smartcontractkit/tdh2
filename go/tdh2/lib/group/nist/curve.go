@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/mod"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group/mod"
 )
 
 // streamReader implements io.Reader from cipher.Stream

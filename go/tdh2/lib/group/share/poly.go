@@ -16,7 +16,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group"
 )
 
 // PriShare represents a private share.

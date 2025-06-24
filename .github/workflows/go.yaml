@@ -23,14 +23,14 @@ jobs:
           find . -name "go.mod" -execdir $(go env GOPATH)/bin/golangci-lint run 
           --timeout=2m0s 
           --out-format=checkstyle:golangci-lint-report.xml 
-          --skip-dirs="internal/group/" \;
+          --skip-dirs="lib/group/" \;
       
       - name: Check golangci-lint report for errors
         run: find . -name "golangci-lint-report.xml" -exec grep "error" {} + && exit 1 || true
 
       - name: Upload golangci-lint report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: golangci-lint-report
           path: |
@@ -88,7 +88,7 @@ jobs:
 
       - name: Upload Go test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: go-test-results
           path: |
@@ -110,7 +110,7 @@ jobs:
           fetch-depth: 0 # fetch all history for all tags and branches to provide more metadata for sonar reports
 
       - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Update golangci-lint report symlinks 
         # When golangci-lint is run in a multimodule project, it creates a report with relative paths to the files which should be updated

@@ -6,8 +6,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group"
-	"github.com/smartcontractkit/tdh2/go/tdh2/internal/group/nist"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group"
+	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group/nist"
 )
 
 var groups = []group.Group{
