@@ -298,7 +298,11 @@ func EncryptWithLabel(pk *PublicKey, msg []byte, label [tdh2.InputSize]byte) (*C
 	if err != nil {
 		return nil, fmt.Errorf("cannot TDH2 encrypt: %w", err)
 	}
-	return &Ciphertext{tdh2Ctxt: tdh2Ctxt, symCtxt: symCtxt, nonce: nonce}, nil
+	return &Ciphertext{
+		tdh2Ctxt: tdh2Ctxt,
+		symCtxt:  symCtxt,
+		nonce:    nonce,
+	}, nil
 }
 
 // Label returns a defensive copy of the ciphertext's TDH2 label.
