@@ -595,3 +595,30 @@ func FuzzCiphertextUnmarshal(f *testing.F) {
 		}
 	})
 }
+
+// TestEncryptWithLabel ensures non-empty labels are preserved, and default Encrypt uses empty label.
+func TestEncryptWithLabel(t *testing.T) {
+	_, pk, _, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	var label [tdh2.InputSize]byte
+	for i := range label {
+		label[i] = byte(i + 1)
+	}
+	c, err := EncryptWithLabel(pk, []byte("msg"), label)
+	if err != nil {
+		t.Fatalf("EncryptWithLabel: %v", err)
+	}
+	if got := c.Label(); got != label {
+		t.Errorf("label mismatch got=%v want=%v", got, label)
+	}
+	// Ensure regular Encrypt produces all-zero label.
+	cZero, err := Encrypt(pk, []byte("msg"))
+	if err != nil {
+		t.Fatalf("Encrypt: %v", err)
+	}
+	if got := cZero.Label(); got != [tdh2.InputSize]byte{} {
+		t.Errorf("expected zero label got=%v", got)
+	}
+}

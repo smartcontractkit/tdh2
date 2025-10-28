@@ -14,13 +14,13 @@ import (
 	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group/share"
 )
 
-var (
-	// defaultHash is the default hash function used. Note, its output size
-	// determines the input size in TDH2.
-	defaultHash = sha256.New
-	// InputSize determines the size of messages and labels.
-	InputSize = defaultHash().Size()
-)
+// defaultHash is the default hash function used. Note, its output size
+// determines the input size in TDH2.
+var defaultHash = sha256.New
+
+// InputSize determines the size of messages and labels.
+// It is fixed to 32 bytes (SHA-256 output size).
+const InputSize = sha256.Size
 
 func parseGroup(group string) (group.Group, error) {
 	switch group {
@@ -424,6 +424,13 @@ func (a *Ciphertext) Equal(b *Ciphertext) bool {
 	}
 	return true
 
+}
+
+// Label returns a copy of the label associated with the ciphertext.
+func (c *Ciphertext) Label() [InputSize]byte {
+	var label [InputSize]byte
+	copy(label[:], c.label)
+	return label
 }
 
 // Decrypt decrypts a ciphertext using a secret key share x_i according to TDH2 paper.
