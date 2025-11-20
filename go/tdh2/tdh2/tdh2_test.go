@@ -327,6 +327,10 @@ func TestEncrypt(t *testing.T) {
 				} else if err != nil {
 					return
 				}
+				gotLabel := ctxt.Label()
+				if !bytes.Equal(gotLabel[:], label) {
+					t.Errorf("label mismatch got=%v want=%v", gotLabel, label)
+				}
 				if diff := cmp.Diff(label, ctxt.label); diff != "" {
 					t.Errorf("label/ctx.Label diff: %v", diff)
 				}
@@ -444,6 +448,19 @@ func TestCtxtVerify(t *testing.T) {
 					group: group,
 					c:     ctxt.c,
 					label: []byte("label"),
+					u:     ctxt.u,
+					u_bar: ctxt.u_bar,
+					e:     ctxt.e,
+					f:     ctxt.f,
+				},
+				err: cmpopts.AnyError,
+			},
+			{
+				name: "wrong Label, good length",
+				ctxt: &Ciphertext{
+					group: group,
+					c:     ctxt.c,
+					label: make([]byte, InputSize),
 					u:     ctxt.u,
 					u_bar: ctxt.u_bar,
 					e:     ctxt.e,

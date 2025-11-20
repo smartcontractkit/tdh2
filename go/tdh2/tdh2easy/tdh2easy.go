@@ -266,9 +266,14 @@ func Redeal(pk *PublicKey, ms *MasterSecret, k, n int) (*PublicKey, []*PrivateSh
 }
 
 // Encrypt generates a fresh symmetric key, encrypts and authenticates
-// the message with it, and encrypts the key using TDH2. It returns a
-// struct encoding the generated ciphertexts.
+// the message with it, and encrypts the key using TDH2 with empty label.
+// It returns a struct encoding the generated ciphertexts.
 func Encrypt(pk *PublicKey, msg []byte) (*Ciphertext, error) {
+	return EncryptWithLabel(pk, msg, [32]byte{})
+}
+
+// EncryptWithLabel is identical to Encrypt but allows passing a non-empty label.
+func EncryptWithLabel(pk *PublicKey, msg []byte, label [tdh2.InputSize]byte) (*Ciphertext, error) {
 	if aes256KeySize != tdh2.InputSize {
 		return nil, fmt.Errorf("incorrect key size")
 	}
@@ -288,8 +293,8 @@ func Encrypt(pk *PublicKey, msg []byte) (*Ciphertext, error) {
 	if err != nil {
 		return nil, err
 	}
-	// encrypt the key with TDH2 using empty label
-	tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, make([]byte, tdh2.InputSize), r)
+	// encrypt the key with TDH2 using the provided label
+	tdh2Ctxt, err := tdh2.Encrypt(pk.p, key, label[:], r)
 	if err != nil {
 		return nil, fmt.Errorf("cannot TDH2 encrypt: %w", err)
 	}
@@ -298,4 +303,9 @@ func Encrypt(pk *PublicKey, msg []byte) (*Ciphertext, error) {
 		symCtxt:  symCtxt,
 		nonce:    nonce,
 	}, nil
+}
+
+// Label returns a defensive copy of the ciphertext's TDH2 label.
+func (c *Ciphertext) Label() [tdh2.InputSize]byte {
+	return c.tdh2Ctxt.Label()
 }
