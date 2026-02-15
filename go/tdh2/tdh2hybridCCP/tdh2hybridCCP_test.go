@@ -60,6 +60,10 @@ func TestPrivateShareMarshal(t *testing.T) {
 	if !reflect.DeepEqual(got.p, want[0].p) { // TinyGo panics!
 		t.Errorf("got=%v want=%v", got, want[0])
 	}
+	//if diff := cmp.Diff(want[0].p, got.p); diff != "" {
+	//if diff := cmp.Diff(want[0].p, got.p, cmpopts.EquateComparable()); diff != "" {
+	//	t.Errorf("mismatch (-want +got):\n%s", diff)
+	//}
 	if err := got.Unmarshal([]byte("broken")); err == nil {
 		t.Errorf("Unmarshal did not fail")
 	}
