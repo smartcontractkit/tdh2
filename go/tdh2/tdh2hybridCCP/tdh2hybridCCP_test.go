@@ -1,4 +1,11 @@
+//go:build !tinygo
+
 package tdh2hybridCCP
+
+// TinyGo has limited support for reflect to save space.
+// Currently, 'tinygo test' panics due to !reflect.DeepEqual() below.
+// Workaround: Copy test file, remove dependencies on reflect and add a
+// build tag/constraint '//go:build tinygo' at the top of the file.
 
 import (
 	"bytes"
@@ -50,7 +57,7 @@ func TestPrivateShareMarshal(t *testing.T) {
 	if err := got.Unmarshal(b); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
-	if !reflect.DeepEqual(got.p, want[0].p) {
+	if !reflect.DeepEqual(got.p, want[0].p) { // TinyGo panics!
 		t.Errorf("got=%v want=%v", got, want[0])
 	}
 	if err := got.Unmarshal([]byte("broken")); err == nil {
@@ -79,7 +86,7 @@ func TestDecryptionShareMarshal(t *testing.T) {
 	if err := got.Unmarshal(b); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
-	if !reflect.DeepEqual(got.d, want.d) {
+	if !reflect.DeepEqual(got.d, want.d) { // TinyGo panics!
 		t.Errorf("got=%v want=%v", got, want)
 	}
 	if err := got.Unmarshal([]byte("broken")); err == nil {
@@ -121,7 +128,7 @@ func TestMasterSecretMarshal(t *testing.T) {
 	if err := got.Unmarshal(b); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}
-	if !reflect.DeepEqual(got.m, want.m) {
+	if !reflect.DeepEqual(got.m, want.m) { // TinyGo panics!
 		t.Errorf("got=%v want=%v", got, want)
 	}
 	if err := got.Unmarshal([]byte("broken")); err == nil {
