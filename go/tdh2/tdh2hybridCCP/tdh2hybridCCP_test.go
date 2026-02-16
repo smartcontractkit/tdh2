@@ -7,6 +7,14 @@ package tdh2hybridCCP
 // Workaround: Copy test file, remove dependencies on reflect and add a
 // build tag/constraint '//go:build tinygo' at the top of the file.
 
+// Replacing reflect.DeepEqual with cmp.Equal
+// Problem that causes panic:
+// cmp.Diff cannot compare structs with unexported fields (e.g. fields that
+// start with _lowercase_ letters). PublicKey (pk), PrivateShare, etc.
+// wrap tdh2 types that have unexported fields.
+// Solution:
+// Don't compare the structs directly - instead, compare their marshaled bytes!
+
 import (
 	"bytes"
 	"encoding/json"
@@ -45,26 +53,41 @@ func TestShareIndex(t *testing.T) {
 }
 
 func TestPrivateShareMarshal(t *testing.T) {
-	_, _, want, err := GenerateKeys(2, 3)
+	_, _, wantShare, err := GenerateKeys(2, 3) // returns MasterSecret (ms), PublicKey (pk), PrivateShare, err
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
 	}
-	b, err := want[0].Marshal()
+	wantShareBytes, err := wantShare[0].Marshal() //serialize original
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
-	var got PrivateShare
-	if err := got.Unmarshal(b); err != nil {
-		t.Fatalf("Unmarshal: %v", err)
-	}
-	if !reflect.DeepEqual(got.p, want[0].p) { // TinyGo panics!
-		t.Errorf("got=%v want=%v", got, want[0])
-	}
-	//if diff := cmp.Diff(want[0].p, got.p); diff != "" {
-	//if diff := cmp.Diff(want[0].p, got.p, cmpopts.EquateComparable()); diff != "" {
+	/*
+		var got PrivateShare
+		if err := got.Unmarshal(b); err != nil {
+			t.Fatalf("Unmarshal: %v", err)
+		}
+		if !reflect.DeepEqual(got.p, want[0].p) { // TinyGo panics!
+			t.Errorf("got=%v want=%v", got, want[0])
+		}
+	*/
+	//if diff := cmp.Diff(wantShare[0].p, gotShare.p); diff != "" {
+	//if diff := cmp.Diff(wantShare[0].p, gotShare.p, cmpopts.EquateComparable()); diff != "" {
+	//if diff := cmp.Diff(wantShare[0].p, gotShare.p, cmpopts.IgnoreUnexported(PrivateShare{})); diff != "" {
 	//	t.Errorf("mismatch (-want +got):\n%s", diff)
 	//}
-	if err := got.Unmarshal([]byte("broken")); err == nil {
+	gotShare := &PrivateShare{} // deserialize to new struct
+	if err := gotShare.Unmarshal(wantShareBytes); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if wantShare[0].Index() != gotShare.Index() { // Compare public API
+		t.Errorf("index mismatch: got %d, want %d", gotShare.Index(), wantShare[0].Index())
+	}
+	gotShareBytes, _ := gotShare.Marshal() // serialize again and compare byte slices
+	if diff := cmp.Diff(wantShareBytes, gotShareBytes); diff != "" {
+		t.Errorf("marshaled share mismatch (-want +got):\n%s", diff)
+	}
+
+	if err := gotShare.Unmarshal([]byte("broken")); err == nil {
 		t.Errorf("Unmarshal did not fail")
 	}
 }
