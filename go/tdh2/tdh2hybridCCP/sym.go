@@ -28,11 +28,11 @@ func symEncrypt(msg, key, aaData []byte) ([]byte, []byte, error) {
 	// and attacker can XOR two ciphertexts to cancel out keystream!
 	// Never reuse a (key, nonce) pair for more than the limit:
 	// * AES-256-GCM block size is 16 byte, max. 2^32 *16 = 64 GB (conservative
-	// limit) and RFC 5084 2^36 - 32 bytes ≈ 68.7 GB (theoretical maximum)
-	//if uint64(len(msg)) > ((1<<32)-2)*uint64(block.BlockSize()) {
-	// * ChaCha20-Poly1305 block size is 64 byte, max. 2^32 *16 = 256 GB
-	// which allows 4× larger messages than AES-256-GCM.
-	// Its block 0 is used by Poly1305:
+	//  limit) and RFC 5084 2^36 - 32 bytes ≈ 68.7 GB (theoretical maximum)
+	//  if uint64(len(msg)) > ((1<<32)-2)*uint64(block.BlockSize()) {
+	// * ChaCha20-Poly1305 block size is 64 byte, max. 2^32 *64 = 256 GB
+	//  which allows 4× larger messages than AES-256-GCM.
+	//  Its block 0 is used by Poly1305:
 	if uint64(len(msg)) > ((1<<32)-1)*uint64(64) { //
 		return nil, nil, fmt.Errorf("message too long")
 	}
