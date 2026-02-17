@@ -6,6 +6,8 @@ package tdh2hybridCCP
 // Currently, 'tinygo test' panics due to !reflect.DeepEqual() below.
 // Workaround: Copy test file, remove dependencies on reflect and add a
 // build tag/constraint '//go:build tinygo' at the top of the file.
+// Note: The '//go:build' line must be at the very top of the file, and
+// followed by a blank line before the package declaration!
 
 // Replacing reflect.DeepEqual with cmp.Equal
 // Problem that causes panic:

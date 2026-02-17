@@ -257,11 +257,12 @@ func GenerateKeys(k, n int) (*MasterSecret, *PublicKey, []*PrivateShare, error) 
 	return &MasterSecret{ms}, &PublicKey{pk}, shares, nil
 }
 
-// Redeal re-deals private shares such that new quorums can decrypt old ciphertexts.
+// Redeal re-keys private shares such that new quorums can decrypt old ciphertexts.
 // It takes the previous public key and master secret as well as the number of nodes
 // sufficient for decrypt k, and the total number of nodes n. It returns a new public
-// key and private shares. The master secret passed corresponds to the public key returned.
-// The old public key can still be used for encryption but it cannot be used for share
+// key and private shares.
+// Note: The public key returned corresponds to the master secret passed in. Thus,
+// the old public key can still be used for encryption but it cannot be used for share
 // verification (the new key has to be used instead).
 func Redeal(pk *PublicKey, ms *MasterSecret, k, n int) (*PublicKey, []*PrivateShare, error) {
 	r, err := randStream()
