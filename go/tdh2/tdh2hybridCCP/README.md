@@ -24,3 +24,14 @@ Decrypted Message: The quick brown fox jumps over the lazy dog's back 0123456789
 PASS
 ok      github.com/hb9cwp/tdh2/go/tdh2/tdh2hybridCCP  0.109s
 ```
+
+### References
+
+The implementation "SG02" of TDH2, the threshold cryptosystem proposed by Shoup and Gennaro[^1], in the Rust library "Thetacrypt"[^2]  motivated the replacement of AES-GCM by ChaCha20-Poly1305 and the name for this fork of `tdh2easy`:
+
+> "We apply a ***hybrid*** approach to encrypt a _symmetric key_ under the _threshold key_ and the actual _plaintext_ under the _symmetric key_. As a _symmetric encryption scheme_, we use the ***ChaCha20Poly1305***, a stream cipher with a message authentication code."
+
+[^1]: [Securing Threshold Cryptosystems against Chosen Ciphertext Attack](https://www.shoup.net/papers/thresh1.pdf), Victor Shoup & Rosario Gennaro, September 18, 2001.
+
+[^2]: [Thetacrypt: A Distributed Service for Threshold Cryptography](https://arxiv.org/pdf/2502.03247), Cryptology and Data Security Research Group at the University of Bern, 6 February 2025.
+
