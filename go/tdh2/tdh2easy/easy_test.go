@@ -6,6 +6,15 @@ and convert into a tdh2easy/easy_test.go, similar to tdh2hybridCCP/hybrid_test.g
 ToDo: Re-key with Redeal() using Master Key (ms) and eventually different k, n.
 Then repeat tests with existing & new collective Public Keys, as well as
 new n individual Private Key Shares.
+
+Run it together with other `*_test.go` files after change into subdir `tdh2easy`
+of this repo:
+
+~/tdh2/go/tdh2/tdh2easy$ go test
+Original message: hybrid threshold cryptography
+Recovered message: hybrid threshold cryptography
+PASS
+ok      github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy       0.126s
 */
 package tdh2easy
 
