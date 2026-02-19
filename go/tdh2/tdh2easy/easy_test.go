@@ -2,6 +2,10 @@
 Copy go/tdh2/cmd/demo/main.go from old fork by @WenxingDuan
 https://github.com/WenxingDuan/tdh2/blob/codex/create-demo-for-threshold-encryption-and-decryption/go/tdh2/cmd/demo/main.go
 and convert into a tdh2easy/easy_test.go, similar to tdh2hybridCCP/hybrid_test.go.
+
+ToDo: Re-key with Redeal() using Master Key (ms) and eventually different k, n.
+Then repeat tests with existing & new collective Public Keys, as well as
+new n individual Private Key Shares.
 */
 package tdh2easy
 
