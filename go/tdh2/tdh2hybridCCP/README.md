@@ -16,7 +16,7 @@ The modern stream cipher provides:
 ### Example
 The [`func TestHybrid()`](./hybrid_test.go) provides running code that steps through the cycle of Distribted Key Generation (DKG), hybrid encryption of plaintext, decryption of shares by parties and their verification before a combiner aggregates the decryption shares, and finally decrypts the ciphertext.
 
-Run it together with other `*_test.go` files after change into subdir `tdhhybridCCP` of this repo:
+Run it together with other `*_test.go` files after change into subdir `tdh2hybridCCP` of this repo:
 ```
 ~/tdh2/go/tdh2/tdh2hybridCCP$ go test 
 Message encrypted successfully.
