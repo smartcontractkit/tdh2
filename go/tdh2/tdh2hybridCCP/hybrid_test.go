@@ -110,15 +110,15 @@ func TestHybrid(t *testing.T) {
 	// make Aggregate() fail:
 	decryptionShares = []*DecryptionShare{share1, share1} // shares not distinct
 	if _, err := Aggregate(cipherText, decryptionShares, n); err == nil {
-		t.Fatalf("Aggregation of share1, share1 failed: %v", err)
+		t.Fatalf("Aggregation of share1, share1 must fail: %v", err)
 	}
 	decryptionShares = []*DecryptionShare{share1, share1, share2} // shares not distinct
 	if _, err := Aggregate(cipherText, decryptionShares, n); err == nil {
-		t.Fatalf("Aggregation of share1, share1, share2 failed: %v", err)
+		t.Fatalf("Aggregation of share1, share1, share2 must fail: %v", err)
 	}
 	decryptionShares = []*DecryptionShare{share1} // fewer shares than threshold k
 	if _, err := Aggregate(cipherText, decryptionShares, n); err == nil {
-		t.Fatalf("Aggregation of share1 failed: %v", err)
+		t.Fatalf("Aggregation of share1 must fail: %v", err)
 	}
 
 	decryptionShares = []*DecryptionShare{share0, share1} // repeat one last time

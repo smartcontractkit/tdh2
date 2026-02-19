@@ -10,7 +10,7 @@ import (
 // const keyLength = 16  // AES-GCM supports 128, 192, and 256 bit keys
 const keyLength = 32 // ChaCha20-Poly1305 supports 256 bit keys only!
 
-var aaData = []byte("tests additional authenticated, but not encrypted metadata")
+var aaData = []byte("some additional authenticated, but not encrypted metadata")
 
 func TestSymmetric(t *testing.T) {
 	key, err := symKey(keyLength)
