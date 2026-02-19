@@ -1,7 +1,7 @@
 /*
-Copy go/tdh2/cmd/demo/main.go from fork by WenxingDuan
+Copy go/tdh2/cmd/demo/main.go from old fork by @WenxingDuan
 https://github.com/WenxingDuan/tdh2/blob/codex/create-demo-for-threshold-encryption-and-decryption/go/tdh2/cmd/demo/main.go
-and convert into a esay_test.go, similar to tdh2hybridCCP/hybrid_test.go.
+and convert into a tdh2easy/easy_test.go, similar to tdh2hybridCCP/hybrid_test.go.
 */
 package tdh2easy
 
@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
-	//tdh2easy "github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
 )
 
 func TestEasy(t *testing.T) {
