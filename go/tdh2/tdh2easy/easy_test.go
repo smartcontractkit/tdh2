@@ -1,53 +1,66 @@
 /*
 Copy go/tdh2/cmd/demo/main.go from fork by WenxingDuan
 https://github.com/WenxingDuan/tdh2/blob/codex/create-demo-for-threshold-encryption-and-decryption/go/tdh2/cmd/demo/main.go
-and convert into a esay_test.go, similar to tdh2/tdh2hybridCCP/hybrid_test.go.
+and convert into a esay_test.go, similar to tdh2hybridCCP/hybrid_test.go.
 */
-
-package main
+package tdh2easy
 
 import (
+	"bytes"
 	"fmt"
-
-	tdh2easy "github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
+	"testing"
+	//tdh2easy "github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
 )
 
-func main() {
+func TestEasy(t *testing.T) {
+	// Optional: Rename this to 'func main() {...}' to convert to
+	// a self-contained Go program. Also replace 't.' by 'log.' and
+	// add prefix 'tdh2easy.' to import functions & objects.
+	// Alternatively, rename it to 'func ExampleEasy()' or similar to test
+	// only for final output, see https://pkg.go.dev/testing#hdr-Examples
+
 	// server generates keys and distributes shares to n nodes with threshold k
-	k, n := 3, 5
-	_, pk, shares, err := tdh2easy.GenerateKeys(k, n)
+	//k, n := 3, 5
+	k, n := 7, 11
+	//k, n := 99, 120
+	//k, n := 121, 120
+	//ms, pk, shares, err := GenerateKeys(k, n)
+	_, pk, shares, err := GenerateKeys(k, n)
 	if err != nil {
-		panic(fmt.Errorf("generate keys: %w", err))
+		t.Fatalf("Failed to generate keys: %v", err)
 	}
 
 	// client encrypts a message using the public key
-	msg := []byte("hello threshold encryption")
-	ctxt, err := tdh2easy.Encrypt(pk, msg)
+	msg := []byte("hybrid threshold cryptography")
+	ctxt, err := Encrypt(pk, msg)
 	if err != nil {
-		panic(fmt.Errorf("encrypt: %w", err))
+		t.Fatalf("Encryption failed: %v", err)
 	}
 
-	// nodes create decryption shares for the ciphertext
-	decShares := make([]*tdh2easy.DecryptionShare, 0, k)
-	for i := 0; i < k; i++ {
-		ds, err := tdh2easy.Decrypt(ctxt, shares[i])
+	// min. k of n nodes create decryption shares of the ciphertext
+	decShares := make([]*DecryptionShare, 0, n) // ask all n node to compute
+	//decShares := make([]*DecryptionShare, 0, k) // ask min. threshold k only
+	for i := 0; i < k; i++ { // try any shares between k and n
+		ds, err := Decrypt(ctxt, shares[i])
 		if err != nil {
-			panic(fmt.Errorf("decrypt share %d: %w", i, err))
+			t.Fatalf("Decryption of share %d failed: %v", i, err)
 		}
 		decShares = append(decShares, ds)
 	}
 
 	// server verifies shares and combines them to recover the message
 	for _, s := range decShares {
-		if err := tdh2easy.VerifyShare(ctxt, pk, s); err != nil {
-			panic(fmt.Errorf("verify share: %w", err))
+		if err := VerifyShare(ctxt, pk, s); err != nil {
+			t.Fatalf("Verify share failed: %v", err)
 		}
 	}
-	recovered, err := tdh2easy.Aggregate(ctxt, decShares, n)
+	recovered, err := Aggregate(ctxt, decShares, n)
 	if err != nil {
-		panic(fmt.Errorf("aggregate: %w", err))
+		t.Fatalf("Aggregation of shares failed: %v", err)
 	}
-
+	if !bytes.Equal(recovered, msg) {
+		t.Fatalf("decrypeted message does not match cleartext\n  got: %#v\n want: %#v", recovered, msg)
+	}
 	fmt.Printf("Original message: %s\n", msg)
 	fmt.Printf("Recovered message: %s\n", recovered)
 }
