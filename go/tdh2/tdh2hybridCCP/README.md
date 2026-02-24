@@ -31,7 +31,7 @@ The implementation "SG02" of TDH2, the threshold cryptosystem proposed by Shoup 
 
 > "We apply a ***hybrid*** approach to encrypt a _symmetric key_ under the _threshold key_ and the actual _plaintext_ under the _symmetric key_. As a _symmetric encryption scheme_, we use the ***ChaCha20Poly1305***, a stream cipher combined with a message authentication code."
 
-Both were designed by by Daniel J. Bernstein, and standardized in RFC 7539 by the IETF
+Both were designed by Daniel J. Bernstein, and published in RFC 7539 by the IRTF
 then updated in [RFC 8439](https://datatracker.ietf.org/doc/html/rfc8439).
 
 [^1]: [Securing Threshold Cryptosystems against Chosen Ciphertext Attack](https://www.shoup.net/papers/thresh1.pdf), Victor Shoup & Rosario Gennaro, September 18, 2001.
