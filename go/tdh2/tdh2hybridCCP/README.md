@@ -27,9 +27,12 @@ ok      github.com/hb9cwp/tdh2/go/tdh2/tdh2hybridCCP  0.109s
 
 ### References
 
-The implementation "SG02" of TDH2, the threshold cryptosystem proposed by Shoup and Gennaro[^1], in the Rust library "Thetacrypt"[^2]  motivated the replacement of AES-GCM by ChaCha20-Poly1305 and the name for this fork of `tdh2easy`:
+The implementation "SG02" of TDH2, the threshold cryptosystem proposed by Shoup and Gennaro[^1], in the Rust library "Thetacrypt"[^2] motivated the replacement of AES-GCM by ChaCha20-Poly1305 and the name for this fork of `tdh2easy`:
 
-> "We apply a ***hybrid*** approach to encrypt a _symmetric key_ under the _threshold key_ and the actual _plaintext_ under the _symmetric key_. As a _symmetric encryption scheme_, we use the ***ChaCha20Poly1305***, a stream cipher with a message authentication code."
+> "We apply a ***hybrid*** approach to encrypt a _symmetric key_ under the _threshold key_ and the actual _plaintext_ under the _symmetric key_. As a _symmetric encryption scheme_, we use the ***ChaCha20Poly1305***, a stream cipher combined with a message authentication code."
+
+Both were designed by by Daniel J. Bernstein, and standardized in RFC 7539 then updated in RFC 8439
+by the IETF.
 
 [^1]: [Securing Threshold Cryptosystems against Chosen Ciphertext Attack](https://www.shoup.net/papers/thresh1.pdf), Victor Shoup & Rosario Gennaro, September 18, 2001.
 
