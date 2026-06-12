@@ -33,17 +33,18 @@ func (p *curvePoint) String() string {
 }
 
 func (p *curvePoint) Equal(p2 group.Point) bool {
-	cp2 := p2.(*curvePoint)
+	cp2 := p2.(*curvePoint) //nolint:errcheck // Design pattern to emulate generics
 
 	// Make sure both coordinates are normalized.
 	// Apparently Go's elliptic curve code doesn't always ensure this.
+	// Use temporary big.Ints to avoid mutating the operands.
 	M := p.c.p.P
-	p.x.Mod(p.x, M)
-	p.y.Mod(p.y, M)
-	cp2.x.Mod(cp2.x, M)
-	cp2.y.Mod(cp2.y, M)
+	x1 := new(big.Int).Mod(p.x, M)
+	y1 := new(big.Int).Mod(p.y, M)
+	x2 := new(big.Int).Mod(cp2.x, M)
+	y2 := new(big.Int).Mod(cp2.y, M)
 
-	return p.x.Cmp(cp2.x) == 0 && p.y.Cmp(cp2.y) == 0
+	return x1.Cmp(x2) == 0 && y1.Cmp(y2) == 0
 }
 
 func (p *curvePoint) Null() group.Point {
@@ -134,8 +135,9 @@ func (p *curvePoint) UnmarshalBinary(buf []byte) error {
 		if p.x == nil || !p.Valid() {
 			return errors.New("invalid elliptic curve point")
 		}
+	} else if buf[0] != 0x04 {
+		return errors.New("invalid elliptic curve point: non-canonical identity encoding")
 	} else {
-		// All bytes are 0, so we initialize x and y
 		p.x = big.NewInt(0)
 		p.y = big.NewInt(0)
 	}
