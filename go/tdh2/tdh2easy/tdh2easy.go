@@ -117,7 +117,7 @@ func (m *MasterSecret) Unmarshal(data []byte) error {
 	return m.m.Unmarshal(data)
 }
 
-func (m MasterSecret) UnmarshalJSON(data []byte) error {
+func (m *MasterSecret) UnmarshalJSON(data []byte) error {
 	return m.Unmarshal(data)
 }
 
