@@ -33,7 +33,7 @@ func (p *curvePoint) String() string {
 }
 
 func (p *curvePoint) Equal(p2 group.Point) bool {
-	cp2 := p2.(*curvePoint) //nolint:errcheck // Design pattern to emulate generics
+	cp2 := p2.(*curvePoint)
 
 	// Make sure both coordinates are normalized.
 	// Apparently Go's elliptic curve code doesn't always ensure this.
