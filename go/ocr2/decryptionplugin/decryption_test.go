@@ -13,7 +13,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/smartcontractkit/libocr/commontypes"
 	"github.com/smartcontractkit/libocr/offchainreporting2/types"
-	"github.com/smartcontractkit/libocr/ragep2p/loggers"
 	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin/config"
 	"github.com/smartcontractkit/tdh2/go/ocr2/decryptionplugin/config/mocks"
 	"github.com/smartcontractkit/tdh2/go/tdh2/tdh2easy"
@@ -807,7 +806,7 @@ func TestNewReportingPlugin_CustomConfigParser(t *testing.T) {
 	customParser := mocks.NewConfigParser(t)
 	factory := DecryptionReportingPluginFactory{
 		ConfigParser: customParser,
-		Logger:       loggers.MakeLogrusLogger(),
+		Logger:       dummyLogger{},
 	}
 
 	customParser.On("ParseConfig", mock.Anything).Return(&config.ReportingPluginConfigWrapper{
