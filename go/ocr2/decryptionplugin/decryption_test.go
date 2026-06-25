@@ -806,7 +806,6 @@ func TestNewReportingPlugin_CustomConfigParser(t *testing.T) {
 	customParser := mocks.NewConfigParser(t)
 	factory := DecryptionReportingPluginFactory{
 		ConfigParser: customParser,
-		Logger:       dummyLogger{},
 	}
 
 	customParser.On("ParseConfig", mock.Anything).Return(&config.ReportingPluginConfigWrapper{
