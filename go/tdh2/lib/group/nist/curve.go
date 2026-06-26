@@ -37,7 +37,6 @@ func (p *curvePoint) Equal(p2 group.Point) bool {
 
 	// Make sure both coordinates are normalized.
 	// Apparently Go's elliptic curve code doesn't always ensure this.
-	// Use temporary big.Ints to avoid mutating the operands.
 	M := p.c.p.P
 	x1 := new(big.Int).Mod(p.x, M)
 	y1 := new(big.Int).Mod(p.y, M)
@@ -138,6 +137,7 @@ func (p *curvePoint) UnmarshalBinary(buf []byte) error {
 	} else if buf[0] != 0x04 {
 		return errors.New("invalid elliptic curve point: non-canonical identity encoding")
 	} else {
+		// All bytes are 0, so we initialize x and y
 		p.x = big.NewInt(0)
 		p.y = big.NewInt(0)
 	}
