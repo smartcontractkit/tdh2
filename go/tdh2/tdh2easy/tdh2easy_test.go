@@ -58,6 +58,27 @@ func TestPrivateShareMarshal(t *testing.T) {
 	}
 }
 
+func TestPrivateShareMarshalJSON(t *testing.T) {
+	_, _, want, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	b, err := want[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	var got PrivateShare
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if !reflect.DeepEqual(got.p, want[0].p) {
+		t.Errorf("got=%v want=%v", got, want[0])
+	}
+	if err := got.UnmarshalJSON([]byte("broken")); err == nil {
+		t.Errorf("Unmarshal did not fail")
+	}
+}
+
 func TestDecryptionShareMarshal(t *testing.T) {
 	_, pk, sh, err := GenerateKeys(2, 3)
 	if err != nil {
@@ -87,6 +108,35 @@ func TestDecryptionShareMarshal(t *testing.T) {
 	}
 }
 
+func TestDecryptionShareMarshalJSON(t *testing.T) {
+	_, pk, sh, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	c, err := Encrypt(pk, []byte("msg"))
+	if err != nil {
+		t.Fatalf("Encrypt: %v", err)
+	}
+	want, err := Decrypt(c, sh[0])
+	if err != nil {
+		t.Fatalf("Decrypt: %v", err)
+	}
+	b, err := want.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	var got DecryptionShare
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if !reflect.DeepEqual(got.d, want.d) {
+		t.Errorf("got=%v want=%v", got, want)
+	}
+	if err := got.UnmarshalJSON([]byte("broken")); err == nil {
+		t.Errorf("UnmarshalJSON did not fail")
+	}
+}
+
 func TestPublicKeyMarshal(t *testing.T) {
 	_, want, _, err := GenerateKeys(2, 3)
 	if err != nil {
@@ -108,6 +158,27 @@ func TestPublicKeyMarshal(t *testing.T) {
 	}
 }
 
+func TestPublicKeyMarshalJSON(t *testing.T) {
+	_, want, _, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	b, err := want.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	var got PublicKey
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if !got.p.Equal(want.p) {
+		t.Errorf("got=%v want=%v", got, want)
+	}
+	if err := got.UnmarshalJSON([]byte("broken")); err == nil {
+		t.Errorf("UnmarshalJSON did not fail")
+	}
+}
+
 func TestMasterSecretMarshal(t *testing.T) {
 	want, _, _, err := GenerateKeys(2, 3)
 	if err != nil {
@@ -126,6 +197,27 @@ func TestMasterSecretMarshal(t *testing.T) {
 	}
 	if err := got.Unmarshal([]byte("broken")); err == nil {
 		t.Errorf("Unmarshal did not fail")
+	}
+}
+
+func TestMasterSecretMarshalJSON(t *testing.T) {
+	want, _, _, err := GenerateKeys(2, 3)
+	if err != nil {
+		t.Fatalf("GenerateKeys: %v", err)
+	}
+	b, err := want.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	var got MasterSecret
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if !reflect.DeepEqual(got.m, want.m) {
+		t.Errorf("got=%v want=%v", got, want)
+	}
+	if err := got.UnmarshalJSON([]byte("broken")); err == nil {
+		t.Errorf("UnmarshalJSON did not fail")
 	}
 }
 
