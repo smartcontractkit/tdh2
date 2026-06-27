@@ -5,7 +5,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/json"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/smartcontractkit/tdh2/go/tdh2/lib/group/nist"
@@ -194,22 +194,83 @@ type ciphertextRaw struct {
 	Nonce    []byte
 }
 
+// ciphertextRaw is serialized as _TDH2Ctxt || _SymCtxt || _Nonce
+// where _TDH2Ctxt, _SymCtxt, and _Nonce are length-prefixed byte slices.
+
+func (c ciphertextRaw) Marshal() ([]byte, error) {
+	buf := make([]byte, 0, 4+len(c.TDH2Ctxt)+4+len(c.SymCtxt)+4+len(c.Nonce))
+	buf = append(buf, prefixWithLength(c.TDH2Ctxt)...)
+	buf = append(buf, prefixWithLength(c.SymCtxt)...)
+	buf = append(buf, prefixWithLength(c.Nonce)...)
+	return buf, nil
+}
+
+func (c *ciphertextRaw) Unmarshal(data []byte) error {
+	if len(data) < 4 {
+		return fmt.Errorf("invalid data length")
+	}
+
+	var err error
+	offset := 0
+
+	c.TDH2Ctxt, offset, err = parseLengthPrefixed(data, offset)
+	if err != nil {
+		return fmt.Errorf("cannot decode TDH2 ciphertext: %w", err)
+	}
+	c.SymCtxt, offset, err = parseLengthPrefixed(data, offset)
+	if err != nil {
+		return fmt.Errorf("cannot decode symmetric ciphertext: %w", err)
+	}
+	c.Nonce, _, err = parseLengthPrefixed(data, offset)
+	if err != nil {
+		return fmt.Errorf("cannot decode nonce: %w", err)
+	}
+
+	return nil
+}
+
+// prefixWithLength encodes length-prefixed bytes.
+// The length is encoded as a 4-byte big-endian integer.
+func prefixWithLength(b []byte) []byte {
+	length := len(b)
+	buf := make([]byte, 4+length)
+	binary.BigEndian.PutUint32(buf[:4], uint32(length))
+	copy(buf[4:], b)
+	return buf
+}
+
+// parseLengthPrefixed decodes length-prefixed bytes.
+func parseLengthPrefixed(data []byte, offset int) ([]byte, int, error) {
+	if offset+4 > len(data) {
+		return nil, 0, fmt.Errorf("unexpected EOF while reading length")
+	}
+	length := int(binary.BigEndian.Uint32(data[offset : offset+4]))
+	offset += 4
+
+	if offset+length > len(data) {
+		return nil, 0, fmt.Errorf("unexpected EOF while reading data")
+	}
+
+	return data[offset : offset+length], offset + length, nil
+}
+
 func (c *Ciphertext) Marshal() ([]byte, error) {
 	ctxt, err := c.tdh2Ctxt.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("cannot marshal TDH2 ciphertext: %w", err)
 	}
-	return json.Marshal(&ciphertextRaw{
+	cRaw := ciphertextRaw{
 		TDH2Ctxt: ctxt,
 		SymCtxt:  c.symCtxt,
 		Nonce:    c.nonce,
-	})
+	}
+	return cRaw.Marshal()
 }
 
 // UnmarshalVerify unmarshals ciphertext and verifies if it matches the public key.
 func (c *Ciphertext) UnmarshalVerify(data []byte, pk *PublicKey) error {
 	var raw ciphertextRaw
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := raw.Unmarshal(data); err != nil {
 		return fmt.Errorf("cannot unmarshal data: %w", err)
 	}
 	c.symCtxt = raw.SymCtxt

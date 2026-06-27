@@ -270,6 +270,87 @@ func TestAggregate(t *testing.T) {
 	}
 }
 
+func TestCiphertextRawMarshal(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input ciphertextRaw
+	}{
+		{
+			name: "Normal case",
+			input: ciphertextRaw{
+				TDH2Ctxt: []byte("TDH2CtxtData"),
+				SymCtxt:  []byte("SymmetricCiphertext"),
+				Nonce:    []byte("NonceData"),
+			},
+		},
+		{
+			name: "Empty fields",
+			input: ciphertextRaw{
+				TDH2Ctxt: []byte{},
+				SymCtxt:  []byte{},
+				Nonce:    []byte{},
+			},
+		},
+		{
+			name: "Nil TDH2Ctxt",
+			input: ciphertextRaw{
+				TDH2Ctxt: nil,
+				SymCtxt:  []byte("SymmetricCiphertext"),
+				Nonce:    []byte("NonceData"),
+			},
+		},
+		{
+			name: "Nil SymCtxt",
+			input: ciphertextRaw{
+				TDH2Ctxt: []byte("TDH2CtxtData"),
+				SymCtxt:  nil,
+				Nonce:    []byte("NonceData"),
+			},
+		},
+		{
+			name: "Nil Nonce",
+			input: ciphertextRaw{
+				TDH2Ctxt: []byte("TDH2CtxtData"),
+				SymCtxt:  []byte("SymmetricCiphertext"),
+				Nonce:    nil,
+			},
+		},
+		{
+			name: "All nil fields",
+			input: ciphertextRaw{
+				TDH2Ctxt: nil,
+				SymCtxt:  nil,
+				Nonce:    nil,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			serialized, err := tc.input.Marshal()
+			if err != nil {
+				t.Fatalf("Marshal failed: %v", err)
+			}
+
+			var deserialized ciphertextRaw
+			err = deserialized.Unmarshal(serialized)
+			if err != nil {
+				t.Fatalf("Unmarshal failed: %v", err)
+			}
+
+			if !bytes.Equal(tc.input.TDH2Ctxt, deserialized.TDH2Ctxt) {
+				t.Errorf("TDH2Ctxt mismatch: got %v, want %v", deserialized.TDH2Ctxt, tc.input.TDH2Ctxt)
+			}
+			if !bytes.Equal(tc.input.SymCtxt, deserialized.SymCtxt) {
+				t.Errorf("SymCtxt mismatch: got %v, want %v", deserialized.SymCtxt, tc.input.SymCtxt)
+			}
+			if !bytes.Equal(tc.input.Nonce, deserialized.Nonce) {
+				t.Errorf("Nonce mismatch: got %v, want %v", deserialized.Nonce, tc.input.Nonce)
+			}
+		})
+	}
+}
+
 func TestCiphertextMarshal(t *testing.T) {
 	_, pk, _, err := GenerateKeys(1, 1)
 	if err != nil {
