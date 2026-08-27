@@ -114,7 +114,7 @@ jobs:
 
       - name: Update golangci-lint report symlinks 
         # When golangci-lint is run in a multimodule project, it creates a report with relative paths to the files which should be updated
-        # The command returns true to avoid failing the workflow if the report is not found
+        # The command returns true to avoid failing the workflow if the report is not found 
         continue-on-error: true
         run: |
           sed -i 's@file\ name="@file\ name="/github/workspace/go/ocr2/decryptionplugin/@' ./golangci-lint-report/ocr2/decryptionplugin/golangci-lint-report.xml && echo "OCR2 golangci-lint report symlinks updated"
