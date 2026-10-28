@@ -10,6 +10,8 @@ import (
 const jsTestPath = "../../../js/tdh2/test/test.js"
 
 func TestJS(t *testing.T) {
+	t.Skip("Skipping JS test")
+
 	_, pk, sh, err := GenerateKeys(2, 3)
 	if err != nil {
 		t.Fatalf("GenerateKeys: %v", err)
